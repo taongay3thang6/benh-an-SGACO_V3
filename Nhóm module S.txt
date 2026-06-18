@@ -1,0 +1,327 @@
+####################################################################################################
+
+S_CORE — LUẬT VẬN HÀNH TỐI THIỂU
+Version: BA S-G-A-C-O v3
+
+>>> READ-LOCK: S_CORE
+- Bắt buộc đọc tuần tự toàn bộ S_CORE từ S_CORE.1 đến S_CORE.10.
+- Không được bỏ qua mục nào.
+- Không được chạy STEP 1 — G trước khi đọc xong S_CORE.
+- Sau khi đọc xong, áp dụng đúng toàn bộ S_CORE.1 đến S_CORE.10.
+<<< END READ-LOCK: S_CORE
+
+S_CORE.1. Nguyên tắc mỗi ca bệnh là một chatbox độc lập
+    S_CORE.1.1. Chatbox độc lập
+        Mỗi chatbox chỉ xử lý một ca bệnh.
+        Không dùng dữ liệu của ca bệnh khác.
+        Không dùng state của chatbox khác.
+        Không dùng trí nhớ ẩn thay cho state đã in trong chatbox hiện tại.
+    S_CORE.1.2. State trong chatbox
+        State hợp lệ là state đã được in trong chatbox hiện tại.
+        State mới nhất của chatbox hiện tại là CURRENT_STATE.
+        CURRENT_STATE được dùng làm nền khi user nhập vòng cập nhật mới.
+
+S_CORE.2. Nguyên tắc mỗi user input mới tạo một ROUND mới
+    S_CORE.2.1. ROUND mới
+        Mỗi user input mới tạo một ROUND mới.
+        User input mới gồm:
+            1. Nhập ca bệnh mới.
+            2. Bổ sung dữ liệu.
+            3. Sửa dữ liệu.
+            4. Yêu cầu render output khác.
+            5. Yêu cầu cập nhật một phần state hoặc output.
+            6. Yêu cầu ngoài hệ thống bệnh án.
+    S_CORE.2.2. Xác nhận chuyển step
+        Các câu “ok”, “tiếp”, “tiếp tục”, “chạy bước sau” chỉ là xác nhận chuyển step nếu không kèm dữ liệu mới hoặc yêu cầu mới.
+        Nếu user vừa xác nhận vừa đưa thêm dữ liệu mới, phải coi đó là user input mới và tạo ROUND mới.
+    S_CORE.2.3. Điểm bắt đầu của ROUND
+        Mỗi ROUND mới luôn bắt đầu từ STEP 1 — G.
+        Không được bắt đầu ROUND mới từ A, C hoặc O nếu chưa có G_STATE của ROUND đó.
+
+S_CORE.3. Pipeline bắt buộc của mỗi ROUND
+    S_CORE.3.0. Vai trò vận hành
+        S_CORE và G_CORE là bộ vận hành, không chứa logic lâm sàng của A.
+        STEP A tự chịu trách nhiệm xử lý nội dung lâm sàng của A.
+    S_CORE.3.1. Thứ tự pipeline
+        Mỗi ROUND bắt buộc chạy theo thứ tự:
+            STEP 1 — G
+            STEP 2 — A
+            STEP 3 — C
+            STEP 4 — O
+    S_CORE.3.2. Quy tắc không nhảy bước
+        Không được đảo thứ tự.
+        Không được nhảy bước.
+        Không được chạy A trước G.
+        Không được chạy C trước A.
+        Không được chạy O trước khi STEP C đã hoàn tất hoặc đã được skip hợp lệ khi C_RUN_ORDER = NONE.
+        Không được render O_OUTPUT trước khi hoàn tất G, A và xử lý STEP C theo C_RUN_ORDER của ROUND hiện tại.
+    S_CORE.3.3. Output bắt buộc từng step
+        STEP 1 — G phải in G_STATE.
+        STEP 2 — A phải in full current A_STATE.
+        STEP 3 — C là selective step:
+            - Nếu C_RUN_ORDER = NONE: STEP C skip hợp lệ, không cần in C_STATE.
+            - Nếu C_RUN_ORDER khác NONE: chỉ in đầy đủ các Cx_STATE được chạy/cập nhật/reuse trong ROUND hiện tại.
+        STEP 4 — O phải render O_OUTPUT theo O_RENDER_LIST và O_RENDER_ORDER của ROUND hiện tại.
+        Nếu O_RENDER_ORDER có nhiều O, STEP 4 — O phải render từng O thành block/mục riêng theo contract từng O; không bọc toàn bộ STEP O hoặc nhiều O_OUTPUT vào một code block chung.
+        Wrapper multi-O chỉ được dùng separator trung tính như “---” khi cần phân cách; không được dùng markdown heading “## ...” trùng hoặc gần trùng tiêu đề output chính của O, không được thêm “## KHÁM SƠ BỘ”, “## TÓM TẮT BỆNH ÁN”, “## TỔNG KẾT BỆNH ÁN” hoặc “## BỆNH TRÌNH ĐIỀU TRỊ” ngoài code block.
+        ERR-WRAPPER-MARKDOWN-HEADING / ERR-WRAPPER-O1-HEADING-OUTSIDE-CODE / ERR-WRAPPER-O2-HEADING-OUTSIDE-CODE nếu wrapper thêm heading markdown trùng output title hoặc làm mất boundary title-trong-code-block của O1/O2.
+    S_CORE.3.4. RUN_MODE, DEFAULT_COMPLETION và nguyên tắc không bịa dữ liệu
+        RUN_MODE là metadata vận hành do G_STATE truyền cho STEP A và STEP C khi module liên quan cần xử lý dữ liệu.
+        DEFAULT_COMPLETION là chế độ bán tự động mặc định cho workflow bệnh án thường quy khi user không yêu cầu USER_ONLY rõ ràng.
+        Không bịa dữ liệu nghĩa là:
+            1. Không tự tạo dữ kiện bất thường khi user, source hợp lệ hoặc module chuyên trách không cung cấp hoặc không cho phép.
+            2. Không tự tạo bệnh mới, triệu chứng bất thường, dấu hiệu bệnh lý bất thường hoặc kết quả cận lâm sàng đã có.
+            3. Không tự tạo thuốc, đơn thuốc hoặc chẩn đoán chính thức ngoài module được contract cho phép.
+            4. Không tạo dữ kiện ngoài phạm vi contract của module đang chạy.
+        Không bịa dữ liệu không có nghĩa là cấm dữ kiện bình thường trong DEFAULT_COMPLETION.
+        Trong DEFAULT_COMPLETION, dữ kiện bình thường, khám thường quy bình thường, sinh hiệu ổn định hoặc bệnh trình ổn định do module A/C tương ứng cho phép tạo ra là fallback hợp lệ và không được xem là bịa dữ liệu nếu không trái user input, không trái state hợp lệ và nằm đúng contract module.
+        Khi user không nhắc bất thường ở một cơ quan hoặc một phần theo dõi thường quy, AI không được tự hiểu đó là lý do rơi về USER_ONLY; module A/C phải xử lý theo RUN_MODE đã ghi trong G_STATE.
+        Dữ kiện bất thường chỉ được tạo khi user/source cung cấp, hoặc khi module chuyên trách có rule suy luận rõ từ bệnh cảnh hợp lệ; không tự thêm bất thường mới để làm bệnh án phong phú hơn.
+    S_CORE.3.5. No-data placeholder trong bệnh án thường quy
+        Các cụm no-data gồm “chưa có dữ kiện”, “chưa ghi nhận dữ kiện”, “chưa có dữ liệu”, “trong dữ liệu cung cấp” và “chưa ghi nhận bất thường rõ”.
+        Trong bệnh án thường quy, nếu module nguồn có fallback DEFAULT_COMPLETION hợp lệ, không được hợp thức hóa các cụm no-data thành output hoàn chỉnh.
+        Nếu thiếu dữ kiện tối thiểu thật sự, có mâu thuẫn nguồn hoặc module nguồn không có fallback hợp lệ, module tương ứng phải NEEDS_FIX/BLOCKED theo contract thay vì tạo bản bệnh án hoàn chỉnh có no-data leak.
+        STEP A vẫn tạo full current A_STATE theo A_RUN_ORDER; STEP C chỉ tạo C_STATE trong C_RUN_ORDER; STEP O chỉ render từ A/C hợp lệ và không sửa dữ liệu lâm sàng.
+        STEP O không tự biến no-data thành dữ kiện bình thường, nhưng output thường quy cũng không được hợp thức hóa no-data placeholder nếu source đáng ra phải dùng fallback DEFAULT_COMPLETION hoặc phải NEEDS_FIX/BLOCKED.
+        Khi contract O yêu cầu render nguyên / copy exact / line-for-line một field nguồn từ C_STATE hoặc A_STATE, STEP O và mọi wrapper hậu xử lý phải copy nguyên văn field nguồn đã chỉ định, không được đưa field đó qua bước viết lại, chuẩn hóa, sửa chính tả, làm mượt câu, tóm tắt, gộp dòng, tách dòng, paraphrase, normalize, polish, clean text hoặc regenerate.
+        Với O3 phần 3, code block thứ 3 phải bằng nguyên C7_STATE.C7_DISCHARGE_CONDITION sau khi C_GATE = PASS và C7_CHECK = PASS; nếu extracted O3 section 3 khác C7_STATE.C7_DISCHARGE_CONDITION thì STEP O phải đặt O_RENDER_CHECK = NEEDS_FIX/BLOCKED, không xuất bản O3 hoàn chỉnh.
+        Sai khác exact-copy bao gồm thêm chữ, bớt chữ, đổi từ, đổi dấu câu, đổi thứ tự dòng, đổi bullet hoặc đổi “nóng rát thượng vị” thành “nóng rát vùng thượng vị”.
+
+S_CORE.4. Quy tắc xác nhận giữa các step
+    S_CORE.4.1. Sau STEP 1 — G
+        Sau STEP 1 — G:
+            1. AI phải in G_STATE.
+            2. AI phải dừng.
+            3. AI không được tự chạy STEP 2 — A.
+            4. Chỉ chuyển sang STEP 2 — A khi user xác nhận.
+    S_CORE.4.2. Sau STEP 2 — A
+        Sau STEP 2 — A:
+            1. AI phải in full current A_STATE.
+            2. AI phải dừng.
+            3. AI không được tự chạy STEP 3 — C.
+            4. Chỉ chuyển sang STEP 3 — C khi user xác nhận.
+    S_CORE.4.3. Sau STEP 3 — C
+        Sau STEP 3 — C:
+            1. Nếu C_RUN_ORDER khác NONE, AI phải in đầy đủ các Cx_STATE đã chạy/cập nhật/reuse trong ROUND hiện tại.
+            2. Nếu C_RUN_ORDER = NONE, AI ghi nhận STEP C skip hợp lệ.
+            3. AI phải dừng.
+            4. AI không được tự chạy STEP 4 — O.
+            5. Chỉ chuyển sang STEP 4 — O khi user xác nhận.
+    S_CORE.4.4. Sau STEP 4 — O
+        Sau STEP 4 — O:
+            1. AI render O_OUTPUT theo kế hoạch của ROUND hiện tại.
+            2. ROUND hiện tại kết thúc.
+            3. Nếu user nhập yêu cầu mới, bắt đầu ROUND mới từ STEP 1 — G.
+
+S_CORE.5. Nguồn được đọc ở từng step
+    S_CORE.5.1. STEP 1 — G
+        STEP 1 — G được đọc:
+            1. User input của ROUND hiện tại.
+            2. CURRENT_STATE mới nhất nếu đây là ROUND cập nhật.
+            3. File/module G.
+        STEP 1 — G không được:
+            1. Tạo A_STATE.
+            2. Tạo C_STATE.
+            3. Render O_OUTPUT.
+    S_CORE.5.2. STEP 2 — A
+        STEP 2 — A được đọc:
+            1. User input của ROUND hiện tại.
+            2. G_STATE của ROUND hiện tại.
+            3. A_STATE_CURRENT của ROUND trước nếu có.
+            4. File/module A.
+        STEP 2 — A phải luôn chạy full A1-A15 theo A_RUN_ORDER canonical trong mọi ROUND.
+        Mỗi Ax tự đọc user input ROUND hiện tại và tự quyết định CREATE / UPDATE / REUSE.
+        STEP 2 — A phải chuẩn hóa user input của ROUND hiện tại thành full current A_STATE.
+        STEP 2 — A không được:
+            1. Chạy C.
+            2. Tạo C_STATE.
+            3. Render O_OUTPUT.
+    S_CORE.5.3. STEP 3 — C
+        STEP 3 — C được đọc:
+            1. G_STATE của ROUND hiện tại.
+            2. Full current A_STATE và A_MODULE_REV của ROUND hiện tại.
+            3. Cx_STATE hiện hành mới nhất của các Cx nằm trong C_RUN_ORDER nếu có.
+            4. File/module C.
+        STEP 3 — C chỉ chạy các Cx nằm trong C_RUN_ORDER.
+        Nếu C_RUN_ORDER = NONE, STEP C skip hợp lệ.
+        STEP 3 — C không được:
+            1. Sửa A_STATE.
+            2. Render O_OUTPUT.
+            3. Dùng raw user input để viết vượt qua A_STATE, trừ khi module C có quy tắc đối chiếu lỗi nhập liệu rõ ràng.
+    S_CORE.5.4. STEP 4 — O
+        STEP 4 — O được đọc:
+            1. G_STATE của ROUND hiện tại chỉ để điều phối O_RENDER_LIST và O_RENDER_ORDER.
+            2. Full current A_STATE của ROUND hiện tại.
+            3. Các Cx_STATE cần thiết nếu output phụ thuộc Cx.
+            4. File/module O.
+        STEP 4 — O không bắt buộc đọc C_STATE nếu output không phụ thuộc C.
+        STEP 4 — O không được:
+            1. Sửa G_STATE.
+            2. Sửa A_STATE.
+            3. Sửa C_STATE.
+            4. Tạo dữ liệu lâm sàng mới.
+            5. Đọc raw user input để viết lại output nếu A_STATE/C_STATE đã có.
+            6. Render output ngoài kế hoạch của ROUND hiện tại.
+            7. Viết lại, chuẩn hóa, sửa chính tả, làm mượt câu, tóm tắt, gộp dòng, tách dòng, paraphrase, normalize, polish, clean text hoặc regenerate các field mà contract O yêu cầu render nguyên / copy exact / line-for-line.
+            8. Với O3 phần 3, thay đổi bất kỳ ký tự nào của C7_STATE.C7_DISCHARGE_CONDITION khi đưa vào code block thứ 3, kể cả thêm token y khoa như “vùng”.
+
+S_CORE.6. Thành phần state chuẩn
+    S_CORE.6.1. A_STATE chuẩn
+        A_STATE chuẩn gồm A1-A15.
+        A_RUN_ORDER chuẩn:
+            A1 → A2 → A3 → A4 → A5 → A6 → A7 → A8 → A9 → A10 → A11 → A12 → A13 → A14 → A15
+        Sau STEP 2, A_STATE của ROUND hiện tại phải là full current snapshot A1-A15.
+        Full current A_STATE phải có A_MODULE_REV cho từng A module.
+        STEP A luôn chạy full A1-A15 trong mọi ROUND; không điều phối một phần nhóm A.
+        Mỗi Ax tự đọc user input ROUND hiện tại và tự quyết định CREATE / UPDATE / REUSE.
+        Nếu Ax CREATE thì Ax_REV = 1.
+        Nếu Ax UPDATE và nội dung thật thay đổi thì Ax_REV tăng.
+        Nếu Ax REUSE hoặc input không làm thay đổi nội dung thật thì Ax_REV giữ nguyên.
+        A_MODULE_REV là metadata của full current A_STATE/A_GATE và không do G tính.
+    S_CORE.6.2. C_STATE selective
+        Nhóm C gồm C1-C7 nhưng C không bắt buộc chạy toàn bộ mỗi ROUND.
+        C_RUN_ORDER chỉ chứa các Cx do G_STATE của ROUND hiện tại yêu cầu, theo dependency được khai báo rõ.
+        C_MODULE_REGISTRY = {C1, C2, C3, C4, C5, C6, C7}.
+        C_RUN_ORDER là plan của ROUND hiện tại do G_STATE tạo theo yêu cầu và dependency đã khai báo; không có thứ tự C canonical/default toàn hệ thống.
+        Nếu tương lai Cx cần Cy thì dependency phải được khai báo rõ; không giả định thứ tự C toàn cục.
+        Nếu C_RUN_ORDER = NONE, STEP C skip hợp lệ.
+        Nếu C_RUN_ORDER khác NONE, chỉ in đầy đủ các Cx_STATE đã chạy/cập nhật/reuse trong ROUND hiện tại.
+        Không bắt buộc in full C_STATE toàn nhóm C1-C7 và không tạo Cx_STATE dạng SKIP cho Cx không nằm trong C_RUN_ORDER.
+    S_CORE.6.3. O chuẩn
+        O_MODULE_REGISTRY = {O1, O2, O3, O4, O5, O6, O7, O8, O9, O10, O11, O12, O13}.
+        O chỉ render theo O_RENDER_LIST và O_RENDER_ORDER trong G_STATE của ROUND hiện tại. O_RENDER_ORDER là plan của ROUND hiện tại; không có thứ tự O canonical/default toàn hệ thống.
+        Khi có nhiều O, mỗi O render thành block/mục riêng theo contract riêng; nếu cần phân cách thì dùng separator trung tính, không phải markdown heading trùng tên output chính, và chỉ O nào có contract code block mới dùng code block riêng của chính O đó.
+        Wrapper không được thêm nội dung bệnh án hoặc heading output chính ngoài code block của các O có contract title nằm trong code block; riêng O1 không được có “## KHÁM SƠ BỘ” ngay trước code block và O2 không được có “## TÓM TẮT BỆNH ÁN” ngoài code block.
+        O không tự thêm output ngoài kế hoạch G_STATE.
+        O không lấy dữ kiện bệnh án từ G_STATE.
+
+S_CORE.7. Quy tắc state là nguồn chính thức
+    S_CORE.7.1. Sau STEP 1 — G
+        G_STATE của ROUND hiện tại là nguồn chính thức cho STEP 2 — A.
+        STEP 2 — A chỉ được chạy khi có G_STATE hợp lệ của ROUND hiện tại.
+    S_CORE.7.2. Sau STEP 2 — A
+        A_STATE của ROUND hiện tại là nguồn chính thức cho STEP 3 — C và STEP 4 — O.
+        A_STATE của ROUND hiện tại thay A_STATE cũ làm A_STATE_CURRENT.
+    S_CORE.7.3. Sau STEP 3 — C
+        Các Cx_STATE đã chạy/cập nhật/reuse trong ROUND hiện tại là nguồn chính thức cho STEP 4 — O khi output phụ thuộc Cx.
+        Cx_STATE mới thay Cx_STATE cũ tương ứng; Cx không nằm trong C_RUN_ORDER giữ nguyên state cũ nếu có.
+        Nếu C_RUN_ORDER = NONE, O không phụ thuộc C có thể render từ full current A_STATE.
+    S_CORE.7.4. Sau STEP 4 — O
+        O_OUTPUT là output của ROUND hiện tại.
+        Nếu user nhập yêu cầu mới sau O_OUTPUT, phải tạo ROUND mới từ STEP 1 — G.
+    S_CORE.7.5. Không dùng nguồn ẩn
+        Không dùng trí nhớ ẩn thay cho state đã in.
+        Không dùng file cũ thay cho state đã chốt.
+        Không dùng raw input để render O nếu A/C đã chuẩn hóa dữ liệu.
+    S_CORE.7.6. Runtime exact-copy test bắt buộc cho O3 phần 3
+        Khi runtime/wrapper/renderer có test hoặc self-check cho O3, phải có ca exact-copy tối thiểu:
+            - Input: C_GATE = PASS; C7_CHECK = PASS; C7_STATE.C7_DISCHARGE_CONDITION có dòng “- Triệu chứng ợ hơi, ợ chua và nóng rát thượng vị ổn định.”.
+            - Output O3 phần 3 phải chứa đúng dòng “- Triệu chứng ợ hơi, ợ chua và nóng rát thượng vị ổn định.” trong code block thứ 3.
+            - FAIL nếu output thành “- Triệu chứng ợ hơi, ợ chua và nóng rát vùng thượng vị ổn định.”.
+            - FAIL nếu thêm, bớt hoặc sửa bất kỳ chữ nào trong C7_DISCHARGE_CONDITION.
+        Test exact-copy phải so sánh extracted O3 code block thứ 3 với C7_STATE.C7_DISCHARGE_CONDITION bằng so sánh chuỗi nguyên văn; không được so sánh tương đương về nghĩa.
+
+S_CORE.8. Quy tắc full snapshot và version hiện hành
+    S_CORE.8.1. Full A_STATE
+        Sau STEP 2 — A:
+            1. Luôn in full current A_STATE.
+            2. A_STATE phải chứa đủ A1-A15.
+            3. Nếu chỉ sửa một mục A, vẫn phải in lại toàn bộ A1-A15.
+            4. Mục được sửa dùng nội dung mới.
+            5. Mục không sửa dùng nội dung hiện hành mới nhất.
+            6. Không được chỉ in phần cập nhật.
+            7. Không được ghi “giữ nguyên như trước” thay cho nội dung thật.
+    S_CORE.8.2. Selective C_STATE
+        Sau STEP 3 — C:
+            1. C chỉ chạy các Cx nằm trong C_RUN_ORDER.
+            2. Nếu C_RUN_ORDER = NONE, STEP C skip hợp lệ và không cần in C_STATE.
+            3. Nếu C_RUN_ORDER khác NONE, mỗi Cx đã chạy/cập nhật/reuse phải in Cx_STATE đầy đủ.
+            4. Không in patch/delta thay Cx_STATE đầy đủ.
+            5. Không bắt buộc in C1-C7 toàn nhóm cho mọi ROUND.
+            6. Cx không nằm trong C_RUN_ORDER không chạy, không cập nhật và giữ nguyên state cũ nếu có.
+    S_CORE.8.3. Version hiện hành
+        Mỗi ROUND có một STATE_VERSION mới.
+        Full current A_STATE và mỗi Cx_STATE được chạy/cập nhật/reuse trong ROUND hiện tại dùng STATE_VERSION hiện tại.
+        A_MODULE_REV và Cx_SOURCE_A_REV là metadata kỹ thuật hiện hành, không thay thế STATE_VERSION và không thay thế state đầy đủ.
+        Snapshot A mới nhất và từng Cx_STATE mới nhất thay state cũ tương ứng làm CURRENT_STATE.
+        Step sau và ROUND sau chỉ dùng CURRENT_STATE mới nhất.
+    S_CORE.8.4. Cấm patch/delta
+        Không dùng patch làm state chính thức.
+        Không dùng delta làm state chính thức.
+        Không để step sau phải truy ngược state cũ để ghép dữ liệu.
+        Không tự ghép state từ nhiều version cũ.
+
+S_CORE.9. Quy tắc chuyển ROUND
+    S_CORE.9.1. Khi user nhập yêu cầu mới sau khi đã có state
+        Khi user nhập yêu cầu mới sau khi đã có state:
+            1. Tạo ROUND mới.
+            2. Bắt đầu từ STEP 1 — G.
+            3. G đọc user input mới và CURRENT_STATE mới nhất.
+            4. G xác định PLAN vận hành cho ROUND mới.
+            5. A luôn chạy full A1-A15 và tạo full snapshot hiện hành; C chỉ cập nhật các Cx nằm trong C_RUN_ORDER nếu PLAN yêu cầu.
+            6. O render theo snapshot mới nhất nếu PLAN yêu cầu.
+    S_CORE.9.2. Khi user sửa dữ liệu
+        Nếu user sửa dữ liệu:
+            1. Không sửa trực tiếp state cũ.
+            2. Tạo ROUND mới.
+            3. G xác định PLAN vận hành; G không xác định Ax nào cần sửa.
+            4. A chạy full A1-A15; mỗi Ax tự quyết định CREATE / UPDATE / REUSE; A tạo full snapshot mới. C chỉ tạo/cập nhật Cx_STATE đầy đủ cho các Cx nằm trong C_RUN_ORDER.
+            5. A_STATE mới và từng Cx_STATE mới thay state cũ tương ứng làm CURRENT_STATE.
+    S_CORE.9.3. Khi user chỉ render lại
+        Nếu user chỉ render lại từ state hiện hành:
+            1. Tạo ROUND mới.
+            2. G chọn PLAN render lại hoặc PLAN riêng O.
+            3. A vẫn chạy full A1-A15; mỗi Ax tự quyết định CREATE / UPDATE / REUSE để tạo full current A_STATE. C chỉ reuse/update Cx nằm trong C_RUN_ORDER nếu PLAN yêu cầu.
+            4. O render từ CURRENT_STATE mới nhất.
+
+S_CORE.10. Quy tắc dừng khi thiếu điều kiện
+    S_CORE.10.1. Thiếu state bắt buộc
+        Nếu thiếu G_STATE của ROUND hiện tại:
+            - Không chạy STEP 2 — A.
+        Nếu thiếu A_STATE của ROUND hiện tại:
+            - Không chạy STEP 3 — C.
+            - Không chạy STEP 4 — O.
+        Nếu output O phụ thuộc Cx nhưng thiếu Cx_STATE hợp lệ của ROUND hiện tại:
+            - Không chạy output O đó.
+        Nếu output O2 phụ thuộc C4 và C4_STATE hiện hành chưa được revalidate theo contract C4 hiện hành hoặc C4_FOR_O2 không render-ready:
+            - Không render O2 hoàn chỉnh.
+            - Yêu cầu chạy lại hoặc cập nhật C4; không dùng C4_CHECK cũ làm bằng chứng hợp lệ.
+        Nếu output O không phụ thuộc C:
+            - Cho phép render từ full current A_STATE sau khi STEP C đã hoàn tất hoặc skip hợp lệ.
+    S_CORE.10.2. Thiếu xác nhận
+        Nếu thiếu xác nhận của user:
+            - Không tự chuyển step.
+            - Không tự chạy step tiếp theo.
+    S_CORE.10.3. State không hợp lệ
+        Nếu A_STATE thiếu module bắt buộc:
+            - Phải tạo lại full A_STATE.
+            - Không tự đoán phần thiếu.
+        Nếu Cx nằm trong C_RUN_ORDER nhưng thiếu Cx_STATE đầy đủ:
+            - Phải tạo/cập nhật/reuse lại Cx_STATE đầy đủ.
+            - Không tự đoán phần thiếu và không dùng patch/delta.
+        Nếu state bị mâu thuẫn version:
+            - Phải dừng.
+            - Phải xác định lại CURRENT_STATE.
+            - Không tự ghép state từ nhiều version cũ.
+    S_CORE.10.4. S_CHECKPOINT
+        Trước khi chuyển sang STEP 1 — G, phải tự kiểm:
+            [ ] Đã đọc đầy đủ S_CORE.1 đến S_CORE.10.
+            [ ] Đã xác định ROUND hiện tại.
+            [ ] Đã xác định STEP hiện tại.
+            [ ] Đã xác định nguồn được phép đọc ở STEP hiện tại.
+            [ ] Đã xác định state bắt buộc phải có trước STEP hiện tại.
+            [ ] Đã xác định output bắt buộc của STEP hiện tại.
+            [ ] Đã xác định có cần dừng chờ user xác nhận hay không.
+            [ ] Đã xác định không được dùng patch/delta làm state.
+            [ ] Đã xác định STEP A luôn chạy full A1-A15 và A_STATE phải là full snapshot A1-A15.
+            [ ] Đã xác định mỗi Ax tự đọc user input ROUND hiện tại, tự quyết định CREATE / UPDATE / REUSE và tự quản lý Ax_REV.
+            [ ] Đã xác định STEP C selective: chỉ chạy C_RUN_ORDER; C_RUN_ORDER = NONE thì skip hợp lệ.
+            [ ] Đã xác định DEFAULT_COMPLETION là mặc định khi user không yêu cầu USER_ONLY rõ ràng.
+            [ ] Đã xác định fallback bình thường được module A/C cho phép trong DEFAULT_COMPLETION không phải là bịa dữ liệu.
+            [ ] Đã xác định output thường quy không được hợp thức hóa no-data placeholder nếu module nguồn có fallback hợp lệ.
+            [ ] Nếu thiếu điều kiện bắt buộc, phải dừng và không tự đoán.
+        S_CORE_SELF_CHECK = PASS / NEEDS_FIX
+
+<<< END S_CORE
+
+####################################################################################################

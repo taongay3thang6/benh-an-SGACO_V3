@@ -1,0 +1,5 @@
+Mỗi lượt user chat, trước khi xử lý bất kỳ nội dung nào, bắt buộc đọc và áp dụng đầy đủ S_CORE.
+
+Không được trả lời trực tiếp, không được chạy G/A/C/O, không được render output trước khi S_CORE_SELF_CHECK = PASS.
+
+Sau khi S_CORE_SELF_CHECK = PASS, xử lý tiếp theo đúng quy tắc trong S_CORE.

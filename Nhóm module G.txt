@@ -1,0 +1,349 @@
+####################################################################################################
+
+G_CORE — BỘ VẬN HÀNH STEP 1
+Version: BA S-G-A-C-O v3
+
+>>> READ-LOCK: G_CORE
+- Bắt buộc đọc tuần tự toàn bộ G_CORE từ G_CORE.1 đến G_CORE.9.
+- Không được bỏ qua mục nào.
+- Không được chạy STEP 2 — A trước khi đọc xong G_CORE và in G_STATE.
+- Sau khi đọc xong, áp dụng đúng toàn bộ G_CORE.1 đến G_CORE.9.
+<<< END READ-LOCK: G_CORE
+
+G_CORE.1. Vai trò vận hành của G_CORE
+    G_CORE.1.1. Nhiệm vụ
+        G_CORE chạy tại STEP 1 — G.
+        G_CORE là bộ vận hành cho ROUND hiện tại, không chứa logic lâm sàng của A.
+        G_CORE có nhiệm vụ:
+            1. Đọc user input của ROUND hiện tại.
+            2. Đọc CURRENT_STATE mới nhất nếu đây là ROUND cập nhật.
+            3. Xác định ROUND_ID mới.
+            4. Xác định STATE_VERSION mới.
+            5. Xác định RUN_MODE.
+            6. Chọn PLAN_NAME vận hành.
+            7. Luôn đặt full A_RUN_ORDER canonical.
+            8. Xác định selective C_RUN_ORDER.
+            9. Xác định selective O_RENDER_LIST và O_RENDER_ORDER.
+            10. In G_STATE của ROUND hiện tại.
+            11. Dừng sau STEP 1 — G. Gửi “tiếp” hoặc “next” để chạy STEP 2 — A.
+    G_CORE.1.2. Giới hạn
+        G_CORE không được:
+            1. Tạo, sửa hoặc viết nội dung A_STATE.
+            2. Xác định Ax nào cần sửa.
+            3. Phân loại user input vào Ax cụ thể.
+            4. Tính revision của A module.
+            5. Tạo hoặc sửa nội dung C_STATE.
+            6. Render O_OUTPUT.
+            7. Viết nội dung bệnh án thay A/C/O.
+            8. Tự chạy STEP 2 — A khi chưa có xác nhận của user.
+
+G_CORE.2. Nguồn được đọc ở STEP 1 — G
+    G_CORE.2.1. Nguồn được đọc
+        STEP 1 — G được đọc:
+            1. User input của ROUND hiện tại.
+            2. CURRENT_STATE mới nhất nếu đây là ROUND cập nhật.
+            3. File/module G.
+    G_CORE.2.2. CURRENT_STATE nếu có
+        CURRENT_STATE có thể gồm:
+            1. G_STATE gần nhất.
+            2. A_STATE_CURRENT nếu đã có.
+            3. C_STATE_CURRENT nếu đã có.
+            4. O_RENDER_LIST gần nhất nếu cần xác định yêu cầu render lại.
+            5. O_OUTPUT gần nhất nếu cần xác định output đang được user yêu cầu sửa hoặc render lại.
+    G_CORE.2.3. Cấm logic lâm sàng A trong G
+        G chỉ chọn kế hoạch vận hành cho pipeline.
+        G không ánh xạ loại dữ liệu user nhập vào module Ax.
+        G không quyết định Ax CREATE / UPDATE / REUSE.
+        Mỗi Ax tự đọc user input ROUND hiện tại và tự quyết định CREATE / UPDATE / REUSE tại STEP A.
+
+G_CORE.3. ROUND_ID, STATE_VERSION và RUN_MODE
+    G_CORE.3.1. ROUND_ID
+        Mỗi user input mới tạo một ROUND mới.
+        Nếu chưa có ROUND trước: ROUND_ID = 1.
+        Nếu đã có ROUND trước: ROUND_ID = ROUND trước + 1.
+    G_CORE.3.2. STATE_VERSION
+        Mỗi ROUND có một STATE_VERSION mới.
+        STATE_VERSION tăng tương ứng theo ROUND_ID: V1, V2, V3, ...
+    G_CORE.3.3. RUN_MODE
+        RUN_MODE gồm:
+            1. USER_ONLY: chỉ dùng dữ liệu user cung cấp.
+            2. DEFAULT_COMPLETION: dùng dữ liệu user và phần bổ sung được module A/C cho phép; là mặc định.
+            3. AUTO_SAMPLE: tạo mẫu khi user yêu cầu ca mẫu.
+        G_STATE bắt buộc ghi RUN_MODE để A/C/O biết cách xử lý dữ liệu.
+    G_CORE.3.4. Quy tắc chọn RUN_MODE
+        DEFAULT_COMPLETION là mặc định khi user yêu cầu workflow bệnh án thường quy như làm bệnh án, khám sơ bộ, bệnh án chi tiết, làm toàn bộ, cập nhật bệnh án hoặc render output bệnh án mà không yêu cầu strict/user-only.
+        G không được chọn USER_ONLY chỉ vì user không cung cấp đủ khám từng cơ quan, sinh hiệu, bệnh trình hoặc dữ kiện theo dõi thường quy.
+        USER_ONLY chỉ dùng khi user yêu cầu rõ hoặc G_STATE hiện hành đã chỉ định rõ các ý tương đương:
+            1. Chỉ dùng dữ liệu user cung cấp.
+            2. Không tự bổ sung.
+            3. Không suy diễn.
+            4. Không dùng phần hoàn thiện mặc định.
+            5. Giữ strict theo dữ liệu đã nhập.
+        AUTO_SAMPLE chỉ dùng khi user yêu cầu ca mẫu hoặc dữ liệu mẫu.
+        G phải ghi RUN_MODE rõ trong G_STATE; A/C đọc RUN_MODE từ G_STATE và không tự chọn RUN_MODE thay G.
+    G_CORE.3.5. DEFAULT_COMPLETION, fallback bình thường và không bịa dữ liệu
+        Trong DEFAULT_COMPLETION, G phải hiểu rằng thiếu dữ kiện bình thường trong bệnh án thường quy sẽ được module A/C xử lý bằng fallback bình thường nếu module đó cho phép và không có dữ kiện trái ngược.
+        Fallback bình thường, khám thường quy bình thường, sinh hiệu ổn định hoặc bệnh trình ổn định do module A/C tương ứng cho phép không phải là bịa dữ liệu.
+        Không bịa dữ liệu là cấm bịa dữ kiện bất thường, dữ kiện ngoài contract, bệnh mới, triệu chứng bất thường, dấu hiệu bệnh lý bất thường, kết quả cận lâm sàng đã có, thuốc/đơn thuốc hoặc chẩn đoán chính thức ngoài module cho phép.
+        Không bịa dữ liệu không được hiểu là cấm module A/C tạo dữ kiện bình thường theo fallback đã được contract cho phép trong DEFAULT_COMPLETION.
+        G không chứa mẫu lâm sàng chi tiết và không tự tạo nội dung fallback; G chỉ khóa RUN_MODE và để A/C thực thi theo contract riêng.
+    G_CORE.3.6. No-data placeholder ở mức điều phối
+        Trong bệnh án thường quy, các cụm “chưa có dữ kiện”, “chưa ghi nhận dữ kiện”, “chưa có dữ liệu”, “trong dữ liệu cung cấp” và “chưa ghi nhận bất thường rõ” là no-data placeholder cần tránh nếu module nguồn có fallback DEFAULT_COMPLETION hợp lệ.
+        Nếu RUN_MODE = DEFAULT_COMPLETION, G không được điều phối theo hướng khiến A/C dùng USER_ONLY no-data placeholder chỉ vì user chưa nhập đủ dữ kiện thường quy.
+        Nếu module nguồn không thể tạo fallback vì thiếu dữ kiện tối thiểu thật sự, có mâu thuẫn nguồn hoặc contract không cho phép, module đó phải NEEDS_FIX/BLOCKED theo contract; G không coi bản bệnh án hoàn chỉnh có no-data leak là output thường quy hợp lệ.
+
+G_CORE.4. STEP A luôn chạy full
+    G_CORE.4.1. A_RUN_ORDER canonical
+        Trong mọi ROUND, STEP A luôn chạy full A1-A15 theo đúng thứ tự:
+            A1 → A2 → A3 → A4 → A5 → A6 → A7 → A8 → A9 → A10 → A11 → A12 → A13 → A14 → A15
+        Chỉ có STEP A full A1-A15.
+        G không chọn Ax riêng lẻ và không dùng field chọn một phần nhóm A.
+    G_CORE.4.2. Quyền tự quyết của từng Ax
+        Khi STEP A chạy full, từng Ax:
+            1. Tự đọc user input ROUND hiện tại.
+            2. Tự đọc nội dung Ax hiện hành nếu có.
+            3. Tự quyết định CREATE / UPDATE / REUSE theo rule revision của S_CORE.
+        Revision A là metadata của full current A_STATE/A_GATE và do STEP A quản lý.
+        G không tính revision A.
+
+G_CORE.5. Selective C và selective O
+    G_CORE.5.1. C_RUN_ORDER
+        STEP C là selective step.
+        C_RUN_ORDER chỉ chứa các Cx cần chạy trong ROUND hiện tại.
+        Nếu không cần C: C_RUN_ORDER = NONE và STEP C skip hợp lệ.
+        C_MODULE_REGISTRY = {C1, C2, C3, C4, C5, C6, C7}.
+        C_RUN_ORDER là plan của ROUND hiện tại do G lập theo yêu cầu user và dependency đã khai báo; không có thứ tự C canonical/default toàn hệ thống.
+        G sắp xếp C_RUN_ORDER trong ROUND theo dependency cần thiết. C7 chạy trước O3/O4 khi các output đó được render.
+    G_CORE.5.2. O_RENDER_LIST và O_RENDER_ORDER
+        STEP O là selective step.
+        O_MODULE_REGISTRY = {O1, O2, O3, O4, O5, O6, O7, O8, O9, O10, O11, O12, O13}.
+        O_RENDER_LIST chỉ chứa output O được phép render trong ROUND hiện tại.
+        O_RENDER_ORDER ghi plan render của ROUND hiện tại; nếu chỉ có một O thì bằng O_RENDER_LIST. Không có thứ tự O canonical/default toàn hệ thống.
+        Khi STEP O có nhiều output, G chỉ điều phối thứ tự; phần render phải tách từng O_OUTPUT thành block/mục riêng theo contract của từng O, không bọc toàn bộ STEP O hoặc nhiều O_OUTPUT trong một code block chung.
+        Giữa các O_OUTPUT phải có phân cách rõ bằng separator trung tính khi cần; không dùng markdown heading “## ...” trùng hoặc gần trùng tiêu đề output chính của O.
+        Wrapper/G không được thêm “## KHÁM SƠ BỘ” trước code block O1, không được thêm “## TÓM TẮT BỆNH ÁN” ngoài code block O2, không được thêm “## TỔNG KẾT BỆNH ÁN” hoặc “## BỆNH TRÌNH ĐIỀU TRỊ” như tiêu đề output chính ngoài contract riêng.
+        ERR-WRAPPER-MARKDOWN-HEADING / ERR-WRAPPER-O1-HEADING-OUTSIDE-CODE / ERR-WRAPPER-O2-HEADING-OUTSIDE-CODE nếu phân cách wrapper dùng markdown heading trùng output title hoặc làm mất format bên trong từng O.
+        Nếu một O có contract code block riêng, code block đó phải mở/đóng trong phạm vi output của chính O đó trước khi render O tiếp theo; O không yêu cầu code block không được bị kéo vào code block của O khác.
+        O9/O10/O11/O13 không được nằm trong code block O1; chúng phải render thành block/mục riêng theo contract riêng của từng O.
+        Không render nhãn kỹ thuật O_OUTPUT hoặc metadata kỹ thuật nếu contract O tương ứng không yêu cầu.
+    G_CORE.5.3. Dependency O → C
+        Sau khi xác định O_RENDER_LIST / O_RENDER_ORDER sơ bộ, G phải thêm Cx cần thiết vào C_RUN_ORDER cuối cùng nếu output O phụ thuộc Cx.
+        Dependency output-level bắt buộc:
+            O2 requires C4.
+            O3 requires C7.
+            O4 requires C7.
+            O9 requires C1.
+            O10 requires C2.
+            O11 requires C3.
+            O12 requires C6.
+            O13 requires C5.
+        Vì O2 là output render phần tổng hợp từ C4, G phải thêm C4 nếu O2 được render.
+        Khi O2 nằm trong O_RENDER_LIST/O_RENDER_ORDER, C4 trong C_RUN_ORDER là bắt buộc và dependency closure chỉ PASS khi C4 được CREATE/UPDATE hoặc REUSE-with-revalidation theo contract C4 hiện hành.
+        G không được chỉ tin C4_CHECK cũ hoặc C4_SOURCE_A_REV khớp để cho O2 render; nếu C4_STATE cũ tồn tại thì G phải yêu cầu STEP C chạy C4 để revalidate C4_FOR_O2 theo contract hiện hành hoặc UPDATE C4.
+        ERR-G-O2-C4-NOT-REVALIDATED nếu O2 được render nhưng C4_FOR_O2 chưa được revalidated; ERR-G-O2-MISSING-C4 nếu O2 render plan không có C4 trong C_RUN_ORDER.
+        Nếu C4_FOR_O2 sai format, là đoạn văn tự do, thiếu dòng top-level bắt đầu bằng dấu “-” hoặc chưa revalidated, G_STATE/G_GATE phải ghi C4 cần UPDATE/NEEDS_FIX và không cho O2 render hoàn chỉnh; O2 chỉ được BLOCKED/NEEDS_FIX đúng nguồn C4.
+        Vì O9 là output render nội dung C1, G phải thêm C1 nếu O9 được render.
+        Vì O10 là output render nội dung C2, G phải thêm C2 nếu O10 được render.
+        Vì O11 là output render nội dung C3, G phải thêm C3 nếu O11 được render.
+        Vì O12 là output render nội dung C6, G phải thêm C6 nếu O12 được render.
+        Vì O13 là output render nội dung C5, G phải thêm C5 nếu O13 được render.
+        C_RUN_ORDER cuối cùng chỉ gồm:
+            1. C được user yêu cầu trực tiếp trong ROUND hiện tại.
+            2. C bắt buộc để phục vụ O_RENDER_LIST / O_RENDER_ORDER theo dependency O → C.
+            3. C được plan ROUND hiện tại chỉ định rõ vì user yêu cầu cập nhật hoặc chạy chính C đó.
+        Không tự chạy C chỉ vì dữ liệu A thay đổi nếu user không yêu cầu C đó, không có O nào trong O_RENDER_LIST cần C đó và plan hiện tại không chỉ định rõ C đó.
+        Nếu A_STATE thay đổi nhưng không có yêu cầu render O và không có yêu cầu chạy C: STEP C = NONE; STEP O = NONE hoặc theo quy tắc PLAN_UPDATE_DATA nếu có render lại output gần nhất.
+        G sắp C_RUN_ORDER cuối cùng trong ROUND theo dependency cần thiết; không áp dụng thứ tự mặc định toàn hệ thống.
+        Dependency khai báo ở mức output. G không phân tích O3 cần trường nào của C7.
+        Khi nhiều O yêu cầu cùng một Cx, Cx chỉ xuất hiện một lần trong C_RUN_ORDER.
+
+G_CORE.6. PLAN_NAME vận hành
+    G_CORE.6.1. Nguyên tắc chung
+        PLAN_NAME chỉ mô tả kế hoạch vận hành C/O của ROUND hiện tại.
+        Mọi PLAN_NAME đều dùng cùng full A_RUN_ORDER canonical tại G_CORE.4.1.
+        PLAN_NAME không được xác định Ax nào cần sửa và không được phân loại input vào Ax.
+    G_CORE.6.2. Danh sách PLAN_NAME
+        Ghi chú numbering: PLAN số 3 dành cho ca mới đã được loại bỏ. Giữ nguyên numbering các PLAN sau để tránh renumber lan rộng và không chạm PLAN_9_OUTSIDE_RECORD trong task này. Khoảng trống số 3 là intentional, không phải thiếu nội dung.
+        1. PLAN_1_SƠ_BỘ
+            - Dùng khi user yêu cầu kiểu: “làm sơ bộ”, “bệnh án sơ bộ”, “khám sơ bộ”, “ghi sơ bộ”, “làm bản khám ban đầu”.
+            - Đây là PLAN chọn output, không phải PLAN chọn A module.
+            - A_RUN_ORDER = full canonical tại G_CORE.4.1.
+            - O_RENDER_LIST = O1, O9, O10, O11, O13.
+            - O_RENDER_ORDER = O1 → O9 → O10 → O11 → O13.
+            - C_RUN_ORDER = dependency closure từ O_RENDER_LIST theo dependency output-level: O9 requires C1; O10 requires C2; O11 requires C3; O13 requires C5.
+            - Vì vậy C_RUN_ORDER phải gồm C1, C2, C3, C5, sắp trong ROUND theo dependency cần thiết; không áp dụng thứ tự C canonical/default toàn hệ thống.
+            - Nếu A15 không có thuốc hoặc C3 không áp dụng, C3 tự tạo trạng thái phù hợp theo contract C3; không bỏ C3 nếu O11 nằm trong O_RENDER_LIST.
+        2. PLAN_2_VÀO_VIỆN
+            - Dùng khi user yêu cầu kiểu: “làm vào viện”, “bệnh án nhập viện”, “viết phần vào viện”, “làm bệnh án vào viện”.
+            - Đây là PLAN chọn output, không phải PLAN chọn A module.
+            - A_RUN_ORDER = full canonical tại G_CORE.4.1.
+            - O_RENDER_LIST = O1, O8, O2, O9, O10, O11, O13.
+            - O_RENDER_ORDER = O1 → O8 → O2 → O9 → O10 → O11 → O13.
+            - C_RUN_ORDER = dependency closure từ O_RENDER_LIST theo dependency output-level; vì O2 requires C4, closure phải có C4; G sắp xếp trong ROUND theo dependency cần thiết.
+        4. PLAN_UPDATE_DATA
+            - Dùng khi user bổ sung hoặc sửa dữ liệu bệnh án.
+            - STEP A vẫn chạy full A1-A15 để cập nhật full current A_STATE.
+            - Sau STEP A:
+                1. Nếu user chỉ bổ sung hoặc sửa dữ liệu và không yêu cầu render output:
+                    - C_RUN_ORDER = NONE.
+                    - O_RENDER_LIST = NONE.
+                    - O_RENDER_ORDER = NONE.
+                    - Hệ thống chỉ cập nhật state và có thể xác nhận ngắn gọn.
+                2. Nếu user bổ sung hoặc sửa dữ liệu kèm yêu cầu render output cụ thể:
+                    - O_RENDER_LIST / O_RENDER_ORDER = output user yêu cầu.
+                    - C_RUN_ORDER = dependency closure từ O_RENDER_LIST theo dependency O → C.
+                3. Nếu user bổ sung hoặc sửa dữ liệu để sửa output vừa render sai hoặc ngữ cảnh cho thấy cần render lại kết quả vừa xuất:
+                    - O_RENDER_LIST / O_RENDER_ORDER = O_RENDER_LIST / O_RENDER_ORDER gần nhất, trừ khi user chỉ định khác.
+                    - C_RUN_ORDER = dependency closure từ O_RENDER_LIST theo dependency O → C.
+                4. Nếu không có O_RENDER_LIST gần nhất và user không yêu cầu output:
+                    - C_RUN_ORDER = NONE.
+                    - O_RENDER_LIST = NONE.
+                    - O_RENDER_ORDER = NONE.
+                    - Chờ lệnh render tiếp theo.
+        5. PLAN_UPDATE_C
+            - Dùng khi user yêu cầu chạy hoặc cập nhật C cụ thể.
+            - C_RUN_ORDER = các C được yêu cầu và dependency O → C.
+            - O_RENDER_LIST = theo yêu cầu user hoặc kế hoạch output hiện hành.
+        6. PLAN_RENDER_SELECTED
+            - Dùng khi user yêu cầu render output O cụ thể.
+            - C_RUN_ORDER = dependency closure từ O_RENDER_LIST / O_RENDER_ORDER theo dependency O → C.
+            - Nếu O_RENDER_LIST / O_RENDER_ORDER có O2, closure bắt buộc có C4 và C4 phải được revalidate theo contract hiện hành trước khi O2 render hoàn chỉnh.
+            - O_RENDER_LIST / O_RENDER_ORDER = các O được yêu cầu theo thứ tự render của ROUND hiện tại.
+        7. PLAN_RENDER_FULL
+            - Dùng khi user yêu cầu render bộ output đầy đủ được phép.
+            - C_RUN_ORDER = dependency closure từ O_RENDER_LIST / O_RENDER_ORDER theo dependency O → C; vì PLAN_RENDER_FULL có O2, C4 phải được revalidate theo contract hiện hành, không dùng C4_CHECK cũ một cách mù quáng.
+            - O_RENDER_LIST = O1, O2, O3, O4, O5, O6, O8, O9, O10, O11, O13.
+            - O_RENDER_ORDER = O1 → O2 → O3 → O4 → O5 → O6 → O8 → O9 → O10 → O11 → O13.
+            - O_RENDER_ORDER của PLAN_RENDER_FULL khớp đúng thứ tự với O_RENDER_LIST của PLAN_RENDER_FULL; đây chỉ là order của PLAN_RENDER_FULL, không tạo thứ tự O canonical/default toàn hệ thống.
+            - C_RUN_ORDER phải có C4 cho O2, C7 cho O3/O4, C1 cho O9, C2 cho O10, C3 cho O11 và C5 cho O13.
+        8. PLAN_RENDER_AGAIN
+            - Dùng khi user chỉ yêu cầu xuất lại từ state hiện hành.
+            - O_RENDER_LIST / O_RENDER_ORDER = output user yêu cầu hoặc O_RENDER_LIST / O_RENDER_ORDER gần nhất.
+            - C_RUN_ORDER = dependency closure từ O_RENDER_LIST / O_RENDER_ORDER đã chọn theo dependency O → C.
+            - Nếu render lại có O2, C4 phải được REUSE-with-revalidation hoặc UPDATE trong STEP C; nếu C4_FOR_O2 không render-ready, O2 BLOCKED đúng nguồn C4.
+        9. PLAN_OUTSIDE_RECORD
+            - Đây là PLAN số 9: chế độ hỏi đáp ngoài bệnh án và bypass workflow bệnh án.
+            - Dùng khi user hỏi kiến thức, xin giải thích, trao đổi hoặc tư vấn chung không nhằm tạo, sửa hoặc render bệnh án hiện hành.
+            - Ví dụ: “Bệnh nhân tiểu đường nên ăn gì?”, “Thực phẩm GI thấp là gì?”, “Gãy xương đùi có triệu chứng gì?”, “Thuốc này có tác dụng gì?”, “Chỉ số này nghĩa là gì?” nếu user không yêu cầu ghi vào bệnh án, “Tư vấn chế độ ăn cho người tăng huyết áp.” hoặc “Giải thích cơ chế bệnh này.”
+            - Không dùng PLAN số 9 nếu user yêu cầu rõ ghi vào bệnh án, cập nhật bệnh án, thêm vào hồ sơ, sửa state, render O, chạy C chính thức hoặc tạo/tổng kết/bệnh trình/đơn thuốc theo hồ sơ hiện hành.
+            - PLAN số 9 là ngoại lệ ngoài bệnh án đối với nguyên tắc PLAN_NAME chung:
+                1. BYPASS_STEP_A = YES.
+                2. BYPASS_A_GATE = YES.
+                3. FORMAL_C_RUN_ORDER = NONE.
+                4. FORMAL_O_RENDER_LIST = NONE.
+                5. FORMAL_O_RENDER_ORDER = NONE.
+                6. STATE_MUTATION = NO.
+            - Không chạy STEP A, không tạo A_STATE, không cập nhật A_STATE cũ và không chạy A_GATE.
+            - Không bắt buộc chạy STEP C, không bắt buộc tạo C_STATE hoặc C6_STATE.
+            - Không bắt buộc render STEP O, không bắt buộc tạo O_OUTPUT hoặc O12_OUTPUT.
+            - Không ghi câu trả lời vào bệnh án và không làm thay đổi A/C/O state hiện hành.
+            - Assistant trả lời trực tiếp theo câu hỏi của user; không ép câu trả lời vào format bệnh án.
+            - C6/O12 trong PLAN số 9 chỉ là rule tham khảo, không phải module state chính thức:
+                1. Được phép tham khảo logic C6 như source/reference rules khi cần tra cứu.
+                2. Được phép tham khảo logic O12 như response style rules khi trình bày câu trả lời.
+                3. Không bắt buộc tạo C6_STATE hoặc O12_OUTPUT.
+                4. Không đặt mặc định C_RUN_ORDER = C6.
+                5. Không đặt mặc định O_RENDER_LIST = O12.
+                6. Nếu user yêu cầu rõ tra cứu nguồn và xuất kết quả tham khảo chính thức, dùng workflow render/reference chính thức ở PLAN phù hợp hoặc theo yêu cầu cụ thể; không mặc định biến mọi câu hỏi ngoài bệnh án thành C6/O12 state.
+            - Source safety khi tham khảo source/reference rules của C6:
+                1. Nếu câu hỏi cần tra cứu hoặc dựa vào thông tin y khoa có thể thay đổi, phải dùng source rules của C6 và ưu tiên nguồn cập nhật nếu có khả năng tra cứu.
+                2. Ưu tiên guideline/hội chuyên ngành, cơ quan y tế, textbook hoặc nguồn tham khảo y khoa được chấp nhận nếu hệ thống cho phép, PubMed/review chất lượng và nguồn học thuật/đại học/bệnh viện uy tín.
+                3. Không dùng làm căn cứ chính blog cá nhân, quảng cáo, trang bán thuốc/sản phẩm, forum/mạng xã hội hoặc nội dung không rõ tác giả hay không có căn cứ nếu có nguồn tin cậy hơn.
+                4. Nếu không có nguồn đủ tin cậy, phải nói rõ mức độ không chắc chắn và không tự bịa.
+                5. Nếu chỉ trả lời từ kiến thức nền mà không tra cứu, phải giữ mức khẳng định phù hợp.
+            - Response style khi tham khảo response style rules của O12:
+                1. Trả lời tự nhiên, phù hợp câu hỏi, không ép format bệnh án và không cần mẫu cố định.
+                2. Có thể trả lời ngắn gọn hoặc chi tiết; giải thích dễ hiểu cho bệnh nhân hoặc chuyên môn cho bác sĩ tùy ngữ cảnh.
+                3. Với vấn đề y khoa nguy cơ cao, thêm khuyến cáo khám, cấp cứu hoặc không tự điều trị khi phù hợp.
+                4. Nếu câu hỏi có thể gây hiểu nhầm là chỉ định điều trị cá nhân, nói rõ cần đánh giá trực tiếp và dữ kiện cụ thể.
+                5. Nếu có dùng nguồn, có thể nêu căn cứ hoặc nguồn ngắn gọn.
+                6. Không biến câu trả lời thành A_STATE, C_STATE hoặc O_OUTPUT chính thức.
+            - Quy tắc chọn PLAN số 9:
+                1. G có thể tự chọn PLAN số 9, không cần hỏi user xác nhận nếu input rõ là câu hỏi ngoài bệnh án.
+                2. Chỉ hỏi lại khi input mơ hồ giữa hỏi kiến thức ngoài bệnh án và muốn cập nhật/render bệnh án.
+                3. Nếu đang có bệnh án active và user hỏi mơ hồ, có thể trả lời ngoài bệnh án nhưng nói rõ: “Tôi không cập nhật vào bệnh án trừ khi anh yêu cầu.”
+                4. Nếu user sau đó yêu cầu ghi vào bệnh án, ROUND sau phải quay lại workflow bệnh án bình thường.
+    G_CORE.6.3. Khi chưa đủ thông tin chọn PLAN_NAME
+        Nếu chưa xác định được PLAN_NAME:
+            1. G_CHECK = NEEDS_FIX.
+            2. G_ERROR ghi rõ lý do cần user làm rõ.
+            3. Không chạy STEP A.
+
+G_CORE.7. Quy tắc không phá selective C/O
+    G_CORE.7.1. Không tự thêm ngoài kế hoạch
+        G không tự thêm O ngoài O_RENDER_LIST đã chọn, trừ khi PLAN_NAME quy định sẵn.
+        G không tự thêm C ngoài C_RUN_ORDER đã chọn, trừ dependency O → C bắt buộc.
+    G_CORE.7.2. Khi C_RUN_ORDER = NONE
+        Nếu C_RUN_ORDER = NONE:
+            1. STEP C skip hợp lệ.
+            2. Không tạo hoặc cập nhật Cx_STATE.
+            3. O chỉ render từ full current A_STATE và O module nếu O không phụ thuộc C.
+    G_CORE.7.3. Khi C_RUN_ORDER khác NONE
+        Nếu C_RUN_ORDER khác NONE:
+            1. Chỉ chạy các Cx nằm trong C_RUN_ORDER.
+            2. Không bắt buộc chạy full C1-C7.
+            3. Không tự thêm Cx ngoài C_RUN_ORDER, trừ dependency O → C bắt buộc.
+
+G_CORE.8. Schema G_STATE canonical
+    G_CORE.8.1. Schema bắt buộc và duy nhất
+        G_STATE canonical chỉ gồm:
+            G_STATE
+            ROUND_ID = ...
+            STATE_VERSION = ...
+            RUN_MODE = USER_ONLY / DEFAULT_COMPLETION / AUTO_SAMPLE
+            PLAN_NAME = ...
+            A_RUN_ORDER = A1 → A2 → A3 → A4 → A5 → A6 → A7 → A8 → A9 → A10 → A11 → A12 → A13 → A14 → A15
+            C_RUN_ORDER = ... / NONE
+            O_RENDER_LIST = ...
+            O_RENDER_ORDER = ...
+            G_CHECK = PASS / NEEDS_FIX
+            G_ERROR = NONE / ...
+    G_CORE.8.2. G_STATE không được chứa
+        G_STATE không được chứa:
+            1. Field chọn một phần nhóm A.
+            2. A_STATE.
+            3. C_STATE.
+            4. O_OUTPUT.
+            5. Nội dung render bệnh án.
+            6. Nội dung chuyên môn thay A/C/O.
+            7. Revision A do G tính.
+    G_CORE.8.3. Vai trò G_STATE
+        G_STATE chỉ là kế hoạch vận hành cho ROUND hiện tại.
+        G_STATE là nguồn cho STEP 2 — A full.
+        O_RENDER_LIST là danh sách output O được phép render.
+        O_RENDER_ORDER là thứ tự render các O trong O_RENDER_LIST.
+        G_STATE không thay thế A_STATE, C_STATE hoặc O_OUTPUT.
+
+G_CORE.9. G_CHECKPOINT và gate
+    G_CORE.9.1. Checklist trước khi kết thúc STEP 1 — G
+        Trước khi kết thúc STEP 1 — G, phải tự kiểm:
+            [ ] Đã đọc đầy đủ G_CORE.1 đến G_CORE.9.
+            [ ] Đã đọc user input của ROUND hiện tại.
+            [ ] Đã xác định ROUND_ID, STATE_VERSION và RUN_MODE.
+            [ ] Nếu user không yêu cầu USER_ONLY rõ ràng, RUN_MODE mặc định là DEFAULT_COMPLETION.
+            [ ] Không chọn USER_ONLY chỉ vì thiếu dữ kiện khám/sinh hiệu/theo dõi thường quy.
+            [ ] Đã xác định fallback bình thường A/C trong DEFAULT_COMPLETION không phải là bịa dữ liệu.
+            [ ] Đã chọn PLAN_NAME vận hành.
+            [ ] Đã đặt full A_RUN_ORDER canonical.
+            [ ] Không chọn Ax riêng lẻ, không phân loại input vào Ax và không tính revision A.
+            [ ] Đã xác định selective C_RUN_ORDER.
+            [ ] Đã thêm dependency O → C bắt buộc vào C_RUN_ORDER.
+            [ ] Đã xác định selective O_RENDER_LIST và O_RENDER_ORDER.
+            [ ] Đã tạo G_STATE canonical.
+            [ ] Không tạo A_STATE, C_STATE hoặc O_OUTPUT.
+            [ ] Dừng sau STEP 1 — G có hướng dẫn rõ: gửi “tiếp” hoặc “next” để chạy STEP 2 — A.
+    G_CORE.9.2. Kết quả G_CHECK
+        Nếu toàn bộ checklist đạt:
+            G_CHECK = PASS
+            G_ERROR = NONE
+        Nếu thiếu bất kỳ điều kiện bắt buộc nào:
+            G_CHECK = NEEDS_FIX
+            G_ERROR = ghi rõ lý do cần sửa.
+    G_CORE.9.3. Gate dừng chờ xác nhận
+        Sau khi in G_STATE, AI phải dừng.
+        Không tự chuyển STEP.
+        Chỉ chuyển sang STEP 2 — A khi user xác nhận.
+
+<<< END G_CORE
+
+####################################################################################################
