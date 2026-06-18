@@ -4860,18 +4860,27 @@ C7.7. Schema C7_STATE
         C7_SOURCE_A_REV: <A_MODULE_REV tương ứng đã dùng>
         C7_FOR_O4: <text/list hoàn chỉnh cho O4 hoặc NONE>
         C7_DISCHARGE_CONDITION:
-            - <dòng tình trạng ra viện 1>
-            - <dòng tình trạng ra viện 2>
-            - <dòng tình trạng ra viện 3>
-            ...
+            - <dòng 1: toàn thân / ý thức / tiếp xúc / toàn trạng>
+            - <dòng 2: triệu chứng của cơ quan bệnh chính lúc ra viện>
+            - <dòng 3: triệu chứng của cơ quan bệnh kèm theo hoặc triệu chứng kèm theo nổi bật lúc ra viện>
+            - <dòng 4: huyết động>
+            - <dòng 5: ăn uống, ngủ nghỉ, đại tiểu tiện>
         Hoặc: C7_DISCHARGE_CONDITION: NONE
         C7_DISCHARGE_DATE_USED: <ngày ra viện dd/mm/yyyy hoặc NONE nếu không có yêu cầu/dữ kiện ra viện>
         C7_SOURCE_NOTE: <ghi chú nguồn, dữ kiện thiếu, giả định được phép theo RUN_MODE hoặc NONE>
         C7_CHECK: PASS | NEEDS_FIX | BLOCKED
         C7_ERROR: NONE | <mô tả lỗi hoặc dữ kiện cần làm rõ>
-    Khi có yêu cầu O3 / tổng kết ra viện / ca ra viện, C7_DISCHARGE_CONDITION phải là block bullet, mỗi dòng tình trạng ra viện bắt đầu chính xác bằng “- ”.
+    Khi có yêu cầu O3 / tổng kết ra viện / ca ra viện, C7_DISCHARGE_CONDITION phải là bullet block bắt buộc đúng 5 dòng bullet; mỗi dòng bắt đầu chính xác bằng “- ”, không được ít hơn 5 dòng, không được nhiều hơn 5 dòng.
     Không được dùng dạng “C7_DISCHARGE_CONDITION = Bệnh nhân...” cho nội dung thật, không được dùng đoạn văn một dòng và không giao cho O3 tự chuyển đoạn văn thành bullet.
+    Không giao việc rút gọn, cắt dòng, đếm dòng hoặc rewrite C7_DISCHARGE_CONDITION cho O3; O3 vẫn chỉ exact-copy C7_DISCHARGE_CONDITION.
     C7_DISCHARGE_CONDITION chỉ chứa tình trạng lâm sàng tại thời điểm ra viện; được phép gồm tỉnh/tiếp xúc tốt/toàn trạng ổn định, triệu chứng chính còn ít/rất nhẹ/giảm nhiều/hết, triệu chứng phụ còn ít/rất nhẹ/giảm nhiều/hết, huyết động ổn định, ăn uống được/ngủ được, đại tiểu tiện bình thường hoặc ổn định theo bệnh cảnh, không ghi nhận dấu hiệu nặng mới nếu phù hợp.
+    Cấu trúc bắt buộc 5 dòng của C7_DISCHARGE_CONDITION:
+        1. Dòng 1 — Toàn thân: ghi tình trạng toàn thân / ý thức / tiếp xúc / toàn trạng. Ví dụ: “- Tỉnh, tiếp xúc tốt, toàn trạng ổn định.”
+        2. Dòng 2 — Triệu chứng của cơ quan bệnh chính: chỉ ghi triệu chứng/vấn đề chính nổi bật lúc vào viện và thể hiện tình trạng lúc ra viện; ưu tiên bệnh chính, vấn đề nặng, lý do khiến bệnh nhân phải vào viện điều trị; nếu có nhiều bệnh chính hoặc nhiều triệu chứng chính thì không liệt kê hết; được lược bớt triệu chứng phụ hoặc triệu chứng ít quan trọng; phải thể hiện mức độ lúc ra viện như còn ít, giảm, hết, cải thiện, ổn định hoặc chưa ổn định theo dữ kiện nguồn. Ví dụ: “- Đau vùng cổ vai cánh tay còn ít, vận động cổ cải thiện.”
+        3. Dòng 3 — Triệu chứng của cơ quan bệnh kèm theo: ghi triệu chứng/vấn đề kèm theo nổi bật lúc vào viện và thể hiện tình trạng lúc ra viện; nếu bệnh kèm theo hoặc triệu chứng kèm theo nhiều thì chỉ giữ vấn đề nổi bật, có ý nghĩa với đợt điều trị; được lược bớt triệu chứng phụ, triệu chứng nhẹ hoặc triệu chứng không phải lý do chính phải điều trị nội trú; nếu không có bệnh kèm theo riêng thì dùng triệu chứng kèm theo nổi bật trong bệnh cảnh chính, không bịa bệnh mới. Ví dụ: “- Đau khớp gối hai bên còn ít, đi lại được; hoa mắt chóng mặt giảm nhiều.”
+        4. Dòng 4 — Huyết động: chỉ ghi huyết động ổn định hoặc không ổn định. Ví dụ: “- Huyết động ổn định.” Nếu dữ kiện cho thấy chưa ổn định thì ghi rõ không ổn định theo dữ kiện nguồn, không tự làm đẹp.
+        5. Dòng 5 — Ăn uống, ngủ nghỉ, đại tiểu tiện: ghi chung tình trạng ăn uống, ngủ nghỉ, đại tiểu tiện; không tách ăn uống/ngủ/đại tiểu tiện thành nhiều dòng riêng. Ví dụ: “- Ăn uống được, ngủ được, đại tiểu tiện bình thường.”
+    Quy tắc lược bớt/gộp ý cho dòng 2 và dòng 3: không biến dòng 2 hoặc dòng 3 thành danh sách dài toàn bộ triệu chứng; chỉ viết triệu chứng nổi bật lúc vào viện và tình trạng của triệu chứng đó lúc ra viện; ưu tiên triệu chứng/bệnh chính, bệnh nặng, lý do phải vào viện điều trị; bỏ bớt triệu chứng ít quan trọng nếu dòng quá dài; không thêm dòng thứ 6 để chứa triệu chứng phụ; không tách huyết động, ăn uống, ngủ nghỉ hoặc đại tiểu tiện sang các dòng ngoài cấu trúc 5 dòng.
     Quy tắc mức độ triệu chứng trong C7_DISCHARGE_CONDITION:
         1. Với mọi triệu chứng cụ thể trong C7_DISCHARGE_CONDITION, bắt buộc dùng mức độ cụ thể như hết, còn ít, rất nhẹ, giảm nhiều, giảm vừa khi chưa đủ ra viện hoặc theo bệnh cảnh phù hợp, hoặc còn đau khi vận động đối với triệu chứng đau cơ xương khớp còn xuất hiện khi vận động.
         2. Triệu chứng cụ thể bao gồm nhưng không giới hạn: đau, sưng đau, hạn chế vận động, tê bì, dị cảm, hoa mắt chóng mặt, ợ hơi, ợ chua, nóng rát thượng vị, nóng rát vùng thượng vị, nuốt vướng, khàn tiếng, ho, khó thở, buồn nôn, nôn, sốt, mệt mỏi nếu là triệu chứng còn/giảm/hết cần mô tả.
@@ -5120,16 +5129,19 @@ C7.14. C7_CHECK / C7_ERROR
         16. Nếu ca có ra viện, C7_DISCHARGE_DATE_USED có ngày dd/mm/yyyy hợp lệ.
         17. Nếu C7_DISCHARGE_DATE_USED khác NONE thì phải đúng định dạng dd/mm/yyyy.
         18. Không có placeholder, dấu "...", hướng dẫn, metadata hoặc no-data leak trong C7_FOR_O4.
-        19. Nếu O3/tổng kết ra viện/ca ra viện cần tình trạng ra viện, C7_DISCHARGE_CONDITION phải tồn tại, khác NONE, là block nhiều dòng dạng bullet, mỗi dòng không rỗng bắt đầu chính xác bằng “- ”, không dùng “C7_DISCHARGE_CONDITION = ...” cho nội dung thật và không phải đoạn văn một dòng.
-        20. C7_DISCHARGE_CONDITION chỉ chứa tình trạng lâm sàng tại thời điểm ra viện và không chứa ngày ra viện/quyết định ra viện/tư vấn/tái khám/dùng thuốc/theo dõi/dặn dò/hướng dùng thuốc sau ra viện.
-        21. C7_DISCHARGE_CONDITION không dùng “ổn định” cho triệu chứng cụ thể; triệu chứng cụ thể phải có mức độ cụ thể như hết/còn ít/rất nhẹ/giảm nhiều/giảm vừa/còn đau khi vận động theo bệnh cảnh.
-        22. Nếu ngày bệnh trình cuối ghi triệu chứng hết, còn ít hoặc rất nhẹ thì C7_DISCHARGE_CONDITION phải giữ đúng mức độ đó, không thay bằng “ổn định”.
-        23. Nếu không có yêu cầu ra viện/tổng kết ra viện/O3, C7_DISCHARGE_CONDITION có thể là NONE theo contract.
-        24. C7_DISCHARGE_CONDITION có giá trị hợp lệ hoặc NONE theo contract và không bị trộn vào C7_FOR_O4 như mục “tình trạng lúc ra viện” riêng.
-        25. C7 được đọc A1/A14 đúng phạm vi ngày, nhưng không dùng A14 như bệnh trình có sẵn.
-        26. Không đọc O_OUTPUT, output đã render, patch/delta hoặc trí nhớ ẩn làm nguồn dưới bất kỳ vai trò nào.
-        27. Không sửa A_STATE và không render O.
-        28. Nếu C7_CHECK = PASS thì C7_ERROR = NONE.
+        19. Nếu O3/tổng kết ra viện/ca ra viện cần tình trạng ra viện, C7_DISCHARGE_CONDITION phải tồn tại, khác NONE, là block đúng 5 dòng bullet, mỗi dòng không rỗng bắt đầu chính xác bằng “- ”, không ít hơn 5 dòng, không nhiều hơn 5 dòng, không dùng “C7_DISCHARGE_CONDITION = ...” cho nội dung thật và không phải đoạn văn một dòng.
+        20. C7_DISCHARGE_CONDITION chỉ PASS khi 5 dòng đúng vai trò: dòng 1 toàn thân; dòng 2 cơ quan bệnh chính; dòng 3 cơ quan bệnh kèm theo hoặc triệu chứng kèm theo nổi bật; dòng 4 huyết động; dòng 5 ăn uống, ngủ nghỉ, đại tiểu tiện.
+        21. Dòng 2 và dòng 3 của C7_DISCHARGE_CONDITION không liệt kê lan man toàn bộ triệu chứng nếu quá dài, không thêm dòng thứ 6 để chứa triệu chứng phụ, và phải lược bớt/gộp ý theo triệu chứng nổi bật lúc vào viện và tình trạng lúc ra viện.
+        22. Dòng 4 của C7_DISCHARGE_CONDITION không gộp ăn uống/ngủ/đại tiểu tiện; dòng 5 không tách ăn uống, ngủ nghỉ, đại tiểu tiện thành nhiều dòng riêng.
+        23. C7_DISCHARGE_CONDITION chỉ chứa tình trạng lâm sàng tại thời điểm ra viện và không chứa ngày ra viện/quyết định ra viện/tư vấn/tái khám/dùng thuốc/theo dõi/dặn dò/hướng dùng thuốc sau ra viện.
+        24. C7_DISCHARGE_CONDITION không dùng “ổn định” cho triệu chứng cụ thể; triệu chứng cụ thể phải có mức độ cụ thể như hết/còn ít/rất nhẹ/giảm nhiều/giảm vừa/còn đau khi vận động theo bệnh cảnh.
+        25. Nếu ngày bệnh trình cuối ghi triệu chứng hết, còn ít hoặc rất nhẹ thì C7_DISCHARGE_CONDITION phải giữ đúng mức độ đó, không thay bằng “ổn định”.
+        26. Nếu không có yêu cầu ra viện/tổng kết ra viện/O3, C7_DISCHARGE_CONDITION có thể là NONE theo contract.
+        27. C7_DISCHARGE_CONDITION có giá trị hợp lệ hoặc NONE theo contract và không bị trộn vào C7_FOR_O4 như mục “tình trạng lúc ra viện” riêng.
+        28. C7 được đọc A1/A14 đúng phạm vi ngày, nhưng không dùng A14 như bệnh trình có sẵn.
+        29. Không đọc O_OUTPUT, output đã render, patch/delta hoặc trí nhớ ẩn làm nguồn dưới bất kỳ vai trò nào.
+        30. Không sửa A_STATE và không render O.
+        31. Nếu C7_CHECK = PASS thì C7_ERROR = NONE.
     C7_CHECK = NEEDS_FIX hoặc BLOCKED khi:
         1. Thiếu ngày vào viện để tính dd/mm/yyyy.
         2. Thiếu ngày ra viện trong ca có ra viện.
@@ -5154,17 +5166,21 @@ C7.14. C7_CHECK / C7_ERROR
         21. C7_DISCHARGE_CONDITION là paragraph/plain text hoặc đoạn văn.
         22. C7_DISCHARGE_CONDITION dùng dấu “=” với một câu dài.
         23. Bất kỳ dòng nội dung nào trong C7_DISCHARGE_CONDITION không bắt đầu chính xác bằng “- ”.
-        24. Có bất kỳ ngày dd/mm/yyyy nào trong C7_DISCHARGE_CONDITION.
-        25. C7_DISCHARGE_CONDITION có “Được giải quyết ra viện ngày”, “Bệnh nhân được ra viện ngày”, “Giải quyết cho bệnh nhân ra viện ngày”, “Ra viện ngày” hoặc “Giải quyết ra viện”.
-        26. C7_DISCHARGE_CONDITION có “Được tư vấn”, “Tư vấn”, “Tái khám”, “Dùng thuốc theo chỉ định”, “Theo dõi đường máu”, “Theo dõi huyết áp”, “dặn dò” hoặc hướng dùng thuốc sau ra viện.
-        27. Bất kỳ dòng C7_DISCHARGE_CONDITION nào dùng “ổn định” cho triệu chứng cụ thể thay vì mức độ cụ thể đều bị lỗi theo rule chung, không phụ thuộc vào danh sách ví dụ.
-        28. Bất kỳ dòng C7_DISCHARGE_CONDITION nào dùng “triệu chứng ... ổn định”, “Triệu chứng [cơ quan/hệ] ổn định”, “Triệu chứng chính ổn định”, “Triệu chứng phụ ổn định”, “Tình trạng đau ổn định” hoặc “[nhóm triệu chứng] ổn định” để thay mức độ triệu chứng cụ thể đều bị lỗi.
-        29. Các ví dụ như “Triệu chứng tiêu hóa ổn định”, “Triệu chứng ợ hơi, ợ chua ổn định”, “Nóng rát thượng vị ổn định”, “Nóng rát vùng thượng vị ổn định”, “Đau ổn định”, “Hoa mắt chóng mặt ổn định”, “Tê bì ổn định”, “Đau khớp vai ổn định”, “Đau thắt lưng ổn định” phải bị bắt bởi rule chung, không chỉ bởi pattern riêng.
-        30. Ngày bệnh trình cuối ghi triệu chứng hết nhưng C7_DISCHARGE_CONDITION lại ghi ổn định, hoặc ngày cuối ghi còn ít/rất nhẹ nhưng C7_DISCHARGE_CONDITION làm mờ thành ổn định.
-        31. C7_CHECK = PASS trong bất kỳ trường hợp sai ở các mục NEEDS_FIX/BLOCKED.
-        32. C7_DISCHARGE_DATE_USED sai định dạng dd/mm/yyyy.
+        24. C7_DISCHARGE_CONDITION không đúng 5 dòng bullet, có ít hơn 5 dòng bullet hoặc có nhiều hơn 5 dòng bullet.
+        25. C7_DISCHARGE_CONDITION không đúng cấu trúc 5 dòng bắt buộc: dòng 1 toàn thân; dòng 2 cơ quan bệnh chính; dòng 3 cơ quan bệnh kèm theo hoặc triệu chứng kèm theo nổi bật; dòng 4 huyết động; dòng 5 ăn uống, ngủ nghỉ, đại tiểu tiện.
+        26. Dòng 2 hoặc dòng 3 của C7_DISCHARGE_CONDITION liệt kê quá dài toàn bộ triệu chứng thay vì chọn triệu chứng nổi bật lúc vào viện và tình trạng lúc ra viện.
+        27. Huyết động / ăn uống / ngủ nghỉ / đại tiểu tiện bị tách sai khỏi cấu trúc dòng 4 và dòng 5 của C7_DISCHARGE_CONDITION, gồm tách ăn uống/ngủ/đại tiểu tiện thành nhiều dòng riêng hoặc gộp ăn uống/ngủ/đại tiểu tiện vào dòng huyết động.
+        28. Có bất kỳ ngày dd/mm/yyyy nào trong C7_DISCHARGE_CONDITION.
+        29. C7_DISCHARGE_CONDITION có “Được giải quyết ra viện ngày”, “Bệnh nhân được ra viện ngày”, “Giải quyết cho bệnh nhân ra viện ngày”, “Ra viện ngày” hoặc “Giải quyết ra viện”.
+        30. C7_DISCHARGE_CONDITION có “Được tư vấn”, “Tư vấn”, “Tái khám”, “Dùng thuốc theo chỉ định”, “Theo dõi đường máu”, “Theo dõi huyết áp”, “dặn dò” hoặc hướng dùng thuốc sau ra viện.
+        31. Bất kỳ dòng C7_DISCHARGE_CONDITION nào dùng “ổn định” cho triệu chứng cụ thể thay vì mức độ cụ thể đều bị lỗi theo rule chung, không phụ thuộc vào danh sách ví dụ.
+        32. Bất kỳ dòng C7_DISCHARGE_CONDITION nào dùng “triệu chứng ... ổn định”, “Triệu chứng [cơ quan/hệ] ổn định”, “Triệu chứng chính ổn định”, “Triệu chứng phụ ổn định”, “Tình trạng đau ổn định” hoặc “[nhóm triệu chứng] ổn định” để thay mức độ triệu chứng cụ thể đều bị lỗi.
+        33. Các ví dụ như “Triệu chứng tiêu hóa ổn định”, “Triệu chứng ợ hơi, ợ chua ổn định”, “Nóng rát thượng vị ổn định”, “Nóng rát vùng thượng vị ổn định”, “Đau ổn định”, “Hoa mắt chóng mặt ổn định”, “Tê bì ổn định”, “Đau khớp vai ổn định”, “Đau thắt lưng ổn định” phải bị bắt bởi rule chung, không chỉ bởi pattern riêng.
+        34. Ngày bệnh trình cuối ghi triệu chứng hết nhưng C7_DISCHARGE_CONDITION lại ghi ổn định, hoặc ngày cuối ghi còn ít/rất nhẹ nhưng C7_DISCHARGE_CONDITION làm mờ thành ổn định.
+        35. C7_CHECK = PASS trong bất kỳ trường hợp sai ở các mục NEEDS_FIX/BLOCKED.
+        36. C7_DISCHARGE_DATE_USED sai định dạng dd/mm/yyyy.
     Nếu C7_DISCHARGE_CONDITION sai format hoặc sai nội dung cấm thì C7_CHECK = NEEDS_FIX hoặc BLOCKED, không được PASS.
-    C7_ERROR dùng ERR-C7-FOR-O4-FORMAT khi một ngày không đúng 6 bullet; ERR-C7-FOR-O4-LEGACY-DAY-HEADER khi C7_FOR_O4 có heading legacy “Ngày [0-9]+ -”, “Ngày [0-9]+:”, “Ngày điều trị thứ ...:” dạng colon kèm nội dung cùng dòng hoặc dạng “Ngày 1 - dd/mm/yyyy: ...”; ERR-C7-FOR-O4-LABEL khi có nhãn render hoặc nhãn cơ quan; ERR-C7-FOR-O4-TREATMENT-LEAK khi có điều trị/kế hoạch/thuốc/chỉ định/theo dõi/tư vấn/tái khám; ERR-C7-DISCHARGE-CONDITION-NOT-BULLET khi C7_DISCHARGE_CONDITION không phải bullet; ERR-C7-DISCHARGE-CONDITION-PARAGRAPH khi C7_DISCHARGE_CONDITION là đoạn văn; ERR-C7-DISCHARGE-CONDITION-FIELD-SYNTAX khi C7_DISCHARGE_CONDITION dùng dấu “=” cho nội dung thật; ERR-C7-DISCHARGE-CONDITION-FORBIDDEN-CONTENT khi C7_DISCHARGE_CONDITION chứa ngày ra viện, quyết định ra viện, tư vấn, tái khám, dùng thuốc, theo dõi, dặn dò hoặc hướng dùng thuốc; ERR-C7-DISCHARGE-CONDITION-SYMPTOM-STABLE khi C7_DISCHARGE_CONDITION dùng “ổn định” thay mức độ cụ thể của bất kỳ triệu chứng cụ thể nào theo rule chung, dùng “triệu chứng ... ổn định” để thay mức độ hoặc không đồng bộ mức độ hết/còn ít/rất nhẹ với ngày bệnh trình cuối; ERR-C7-DISCHARGE-DATE-FORMAT khi C7_DISCHARGE_DATE_USED sai dd/mm/yyyy; ERR-C7-STALE-PASS khi C7_CHECK = PASS nhưng C7_DISCHARGE_CONDITION không render-ready hoặc chứa nội dung cấm.
+    C7_ERROR dùng ERR-C7-FOR-O4-FORMAT khi một ngày không đúng 6 bullet; ERR-C7-FOR-O4-LEGACY-DAY-HEADER khi C7_FOR_O4 có heading legacy “Ngày [0-9]+ -”, “Ngày [0-9]+:”, “Ngày điều trị thứ ...:” dạng colon kèm nội dung cùng dòng hoặc dạng “Ngày 1 - dd/mm/yyyy: ...”; ERR-C7-FOR-O4-LABEL khi có nhãn render hoặc nhãn cơ quan; ERR-C7-FOR-O4-TREATMENT-LEAK khi có điều trị/kế hoạch/thuốc/chỉ định/theo dõi/tư vấn/tái khám; ERR-C7-DISCHARGE-CONDITION-NOT-BULLET khi C7_DISCHARGE_CONDITION không phải bullet; ERR-C7-DISCHARGE-CONDITION-PARAGRAPH khi C7_DISCHARGE_CONDITION là đoạn văn; ERR-C7-DISCHARGE-CONDITION-FIELD-SYNTAX khi C7_DISCHARGE_CONDITION dùng dấu “=” cho nội dung thật; ERR-C7-DISCHARGE-CONDITION-WRONG-LINE-COUNT khi C7_DISCHARGE_CONDITION không đúng 5 dòng bullet; ERR-C7-DISCHARGE-CONDITION-WRONG-STRUCTURE khi C7_DISCHARGE_CONDITION không đúng cấu trúc 5 dòng bắt buộc; ERR-C7-DISCHARGE-CONDITION-OVERLISTED-SYMPTOMS khi dòng 2 hoặc dòng 3 liệt kê lan man toàn bộ triệu chứng thay vì chọn triệu chứng nổi bật; ERR-C7-DISCHARGE-CONDITION-FORBIDDEN-CONTENT khi C7_DISCHARGE_CONDITION chứa ngày ra viện, quyết định ra viện, tư vấn, tái khám, dùng thuốc, theo dõi, dặn dò hoặc hướng dùng thuốc; ERR-C7-DISCHARGE-CONDITION-SYMPTOM-STABLE khi C7_DISCHARGE_CONDITION dùng “ổn định” thay mức độ cụ thể của bất kỳ triệu chứng cụ thể nào theo rule chung, dùng “triệu chứng ... ổn định” để thay mức độ hoặc không đồng bộ mức độ hết/còn ít/rất nhẹ với ngày bệnh trình cuối; ERR-C7-DISCHARGE-DATE-FORMAT khi C7_DISCHARGE_DATE_USED sai dd/mm/yyyy; ERR-C7-STALE-PASS khi C7_CHECK = PASS nhưng C7_DISCHARGE_CONDITION không render-ready hoặc chứa nội dung cấm.
     Nếu C7_CHECK = NEEDS_FIX hoặc BLOCKED thì C7_ERROR ghi rõ lỗi hoặc dữ kiện cần user bổ sung.
 
 C7.15. Ví dụ hệ thống tối thiểu
@@ -5246,15 +5262,32 @@ C7.15. Ví dụ hệ thống tối thiểu
         O3 đọc C7_DISCHARGE_CONDITION để render tình trạng lúc ra viện.
         O4 chỉ render nguyên C7_FOR_O4; O4 không tự thêm, không tự sửa và không tự bù.
 
-    Ví dụ 7 — PASS C7_DISCHARGE_CONDITION dạng bullet cho O3:
+    Ví dụ 7 — PASS C7_DISCHARGE_CONDITION đúng 5 dòng bullet cho O3:
         C7_DISCHARGE_CONDITION:
         - Tỉnh, tiếp xúc tốt, toàn trạng ổn định.
-        - Đau cổ vai cánh tay còn ít, vận động cổ cải thiện.
-        - Hoa mắt chóng mặt rất nhẹ.
-        - Hết ợ hơi, ợ chua, nóng rát vùng thượng vị.
+        - Đau vùng cổ vai cánh tay còn ít, vận động cổ cải thiện.
+        - Đau khớp gối hai bên còn ít, đi lại được; hoa mắt chóng mặt giảm nhiều.
         - Huyết động ổn định.
         - Ăn uống được, ngủ được, đại tiểu tiện bình thường.
         C7_CHECK = PASS
+
+    Ví dụ 7b — FAIL: C7_DISCHARGE_CONDITION có 8 bullet nên không được PASS:
+        C7_DISCHARGE_CONDITION:
+        - Tỉnh, tiếp xúc tốt, toàn trạng ổn định.
+        - Đau vùng cổ vai cánh tay còn ít, vận động cổ cải thiện.
+        - Đau khớp gối hai bên còn ít, đi lại được.
+        - Hoa mắt chóng mặt giảm nhiều.
+        - Ợ hơi, ợ chua, nóng rát thượng vị còn ít.
+        - Huyết động ổn định.
+        - Ăn uống được, ngủ được.
+        - Đại tiểu tiện bình thường.
+        C7_CHECK = PASS
+        C7_ERROR = NONE
+        Lỗi:
+            - C7_DISCHARGE_CONDITION nhiều hơn 5 dòng bullet.
+            - C7_CHECK không được PASS.
+            - C7_CHECK phải NEEDS_FIX.
+            - C7_ERROR = ERR-C7-DISCHARGE-CONDITION-WRONG-LINE-COUNT hoặc ERR-C7-DISCHARGE-CONDITION-WRONG-STRUCTURE.
 
     Ví dụ 8 — FAIL: C7_DISCHARGE_CONDITION là đoạn văn nhưng C7_CHECK = PASS:
         C7_DISCHARGE_CONDITION = Bệnh nhân tỉnh, tiếp xúc tốt, đau vùng cổ vai cánh tay còn ít, ăn uống được, ngủ được.
