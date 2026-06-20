@@ -2998,12 +2998,12 @@ C4.8. Phạm vi C4
         5. Biến chỉ định cần làm trong A13 thành kết quả đã có.
 
 C4.9. Nguyên tắc chung của tổng hợp
-    C4 chỉ gọi là hội chứng khi có đủ dữ kiện cốt lõi theo C4_SYNDROME_DICTIONARY hoặc theo dữ kiện A_STATE đủ rõ.
+    C4 chỉ gọi là hội chứng khi NAME exact-match một trong 6 hội chứng chuẩn trong C4_SYNDROME_DICTIONARY và có dữ kiện thật trong A_STATE đủ thuộc phạm vi hội chứng đó.
     C4 ưu tiên hội chứng liên quan lý do vào viện, diễn biến chính, khám hiện tại và kết quả cận lâm sàng liên quan đã có.
     C4 không dùng “nghi”, “theo dõi”, “hướng tới”, “phù hợp”, “chưa loại trừ” hoặc “có khả năng” trước tên hội chứng.
     C4 không bê nguyên chẩn đoán A12 thay hội chứng.
-    Nếu dữ kiện đủ tiêu chí hội chứng trong C4_SYNDROME_DICTIONARY thì TYPE = Hội chứng và NAME = tên hội chứng canonical.
-    Nếu chưa đủ hội chứng nhưng có triệu chứng thật thì TYPE = Triệu chứng.
+    Nếu dữ kiện đủ tiêu chí một trong 6 hội chứng chuẩn trong C4_SYNDROME_DICTIONARY thì TYPE = Hội chứng và NAME = đúng tên canonical exact-match; không được tự chỉnh sửa/tùy biến tên hội chứng.
+    Nếu có triệu chứng thật nhưng không đủ điều kiện vào bất kỳ hội chứng nào trong 6 hội chứng chuẩn thì TYPE = Triệu chứng.
     Nếu là kết quả cận lâm sàng rời thì TYPE = Cận lâm sàng.
     TYPE_GROUP_ORDER bắt buộc khi sắp xếp C4_ITEMS và render C4_FOR_O2:
         1. TYPE = Hội chứng → GROUP_ORDER = 1.
@@ -3017,7 +3017,7 @@ C4.9. Nguyên tắc chung của tổng hợp
 
 C4.10. Quy tắc xác định hội chứng đủ điều kiện
     Một hội chứng đủ điều kiện khi có:
-        1. Tên hội chứng nằm trong C4_SYNDROME_DICTIONARY hoặc là tên hội chứng đủ rõ từ dữ kiện thật.
+        1. Tên hội chứng exact-match một trong 6 hội chứng chuẩn trong C4_SYNDROME_DICTIONARY.
         2. Dữ kiện cơ năng, thực thể hoặc cận lâm sàng hỗ trợ đủ để không phải suy đoán.
         3. Không chỉ là chẩn đoán A12, không chỉ là chỉ định A13 và không chỉ là cảnh báo C2/C3.
     Không đủ điều kiện nếu:
@@ -3025,56 +3025,60 @@ C4.10. Quy tắc xác định hội chứng đủ điều kiện
         2. Chỉ có kết quả cận lâm sàng đơn lẻ không liên hệ lâm sàng rõ.
         3. Chỉ có chẩn đoán đã ghi nhưng thiếu dữ kiện hỗ trợ trong A_STATE.
         4. Cần thêm dữ kiện mới mới có thể kết luận hội chứng.
-    Nếu không đủ điều kiện hội chứng, chỉ tạo C4_ITEM TYPE = Triệu chứng khi có dữ kiện thật và hữu ích cho O2.
+    Nếu không đủ điều kiện vào bất kỳ hội chứng nào trong 6 hội chứng chuẩn, chỉ tạo C4_ITEM TYPE = Triệu chứng khi có dữ kiện thật và hữu ích cho O2.
 
 C4.11. C4_SYNDROME_DICTIONARY
-    C4.11.1. Hội chứng nhiễm trùng / viêm
-        Lâm sàng: Sốt, rét run, mệt mỏi, đau nhức, ăn uống kém, triệu chứng khu trú gợi ý ổ viêm hoặc dấu nhiễm trùng tại cơ quan liên quan.
-        Cận lâm sàng: Bạch cầu tăng hoặc giảm, CRP/PCT tăng, cấy hoặc xét nghiệm vi sinh dương tính, hình ảnh học gợi ổ viêm khi đã có trong A14_STATE.
-        Quy tắc chọn: Chọn khi có biểu hiện toàn thân hoặc tại chỗ kèm dữ kiện thực thể/cận lâm sàng đủ hỗ trợ tình trạng nhiễm trùng hoặc viêm.
-        Quy tắc loại trừ / ranh giới: Không chọn chỉ vì A12 ghi bệnh nhiễm trùng nếu thiếu dữ kiện hỗ trợ; không dùng A13 chỉ định xét nghiệm như kết quả đã có.
+    C4.11.0. Danh sách hội chứng chuẩn và khóa NAME
+        C4 chỉ được tạo TYPE = Hội chứng khi NAME exact-match một trong 6 tên canonical sau:
+            1. Hội chứng cổ vai cánh tay
+            2. Hội chứng viêm khớp
+            3. Hội chứng thắt lưng hông
+            4. Hội chứng tiền đình
+            5. Hội chứng viêm dạ dày tá tràng
+            6. Hội chứng tăng glucose máu
+        Không được viết biến thể, tên gần đúng, tên theo vị trí/tổn thương tự do hoặc thêm hội chứng ngoài danh sách.
+        Không được dùng lại tên hội chứng cũ nếu không thuộc 6 tên canonical trên.
+        Tên bị cấm gồm: Hội chứng dạ dày - thực quản, Hội chứng cơ xương khớp, Hội chứng đau khớp gối, Hội chứng thoái hóa khớp gối, Hội chứng đau cột sống thắt lưng, Hội chứng thần kinh, Hội chứng hô hấp, Hội chứng nhiễm trùng / viêm, Hội chứng chuyển hóa / huyết áp / huyết học, Hội chứng tăng đường huyết, Hội chứng rối loạn tiền đình, Hội chứng cổ vai gáy.
+        Nếu dữ kiện thuộc một hội chứng trong danh sách chuẩn mới thì bắt buộc TYPE = Hội chứng và NAME = đúng tên canonical; không hạ xuống TYPE = Triệu chứng.
+        Nếu triệu chứng thật không đủ điều kiện vào bất kỳ hội chứng nào trong 6 hội chứng chuẩn thì TYPE = Triệu chứng.
+        Nếu là kết quả cận lâm sàng đã có từ A14_STATE và không ghép trực tiếp vào hội chứng nào thì TYPE = Cận lâm sàng.
 
-    C4.11.2. Hội chứng hô hấp
-        Lâm sàng: Ho, khạc đờm, đau ngực kiểu hô hấp, khó thở, khò khè, sốt kèm triệu chứng đường hô hấp, ran phổi, rì rào phế nang giảm, co kéo cơ hô hấp, SpO₂ giảm hoặc thở nhanh.
-        Cận lâm sàng: X-quang/CT ngực có tổn thương hô hấp, khí máu, công thức máu hoặc CRP liên quan khi đã có trong A14_STATE.
-        Quy tắc chọn: Chọn khi có triệu chứng hô hấp kèm dấu khám hoặc cận lâm sàng hỗ trợ.
-        Quy tắc loại trừ / ranh giới: Không chọn chỉ vì ho đơn độc thiếu dữ kiện khác; khi chỉ có ho thì tạo TYPE = Triệu chứng.
+    C4.11.1. Hội chứng cổ vai cánh tay
+        Dữ kiện lâm sàng: Đau vùng cổ, đau vùng cột sống cổ, đau vùng cổ vai, đau lan vai/cánh tay nếu có, vận động cột sống cổ đau hoặc hạn chế, co cứng cơ cạnh sống cổ nếu có, tê bì/đau lan tay nếu có dữ kiện thật.
+        Cận lâm sàng hỗ trợ: X-quang cột sống cổ, MRI cột sống cổ, CT cột sống cổ nếu có trong A14_STATE.
+        Quy tắc chọn: Khi có đau vùng cổ/cột sống cổ/cổ vai hoặc vận động cột sống cổ đau/hạn chế, chọn TYPE = Hội chứng, NAME = Hội chứng cổ vai cánh tay.
+        Quy tắc cận lâm sàng: Nếu có X-quang/MRI/CT cột sống cổ trong A14_STATE, gộp vào CẬN_LÂM_SÀNG của hội chứng này.
 
-    C4.11.3. Hội chứng suy hô hấp
-        Lâm sàng: Khó thở nhiều, hụt hơi, tím tái, mệt lả, không nằm được do khó thở, SpO₂ giảm, thở nhanh, co kéo cơ hô hấp, tím hoặc rối loạn ý thức do thiếu oxy.
-        Cận lâm sàng: Khí máu bất thường, PaO₂ giảm, PaCO₂ tăng, X-quang/CT ngực liên quan khi đã có trong A14_STATE.
-        Quy tắc chọn: Chọn khi có bằng chứng lâm sàng rõ hoặc chỉ số oxy/khí máu hỗ trợ suy hô hấp.
-        Quy tắc loại trừ / ranh giới: Không chọn chỉ vì khó thở nhẹ không có dấu suy hô hấp; không tự tạo SpO₂ hoặc khí máu.
+    C4.11.2. Hội chứng viêm khớp
+        Dữ kiện lâm sàng: Đau khớp, đau khớp gối, đau khớp khi vận động, hạn chế vận động khớp, sưng/nóng/đỏ/đau các khớp nếu có, lạo xạo khớp nếu có, tràn dịch khớp/cứng khớp nếu có.
+        Cận lâm sàng hỗ trợ: X-quang các khớp, siêu âm các khớp, MRI khớp, marker viêm CRP nếu có trong A14_STATE.
+        Quy tắc chọn: Chỉ cần có triệu chứng khớp rõ như đau khớp gối khi vận động cũng quy về TYPE = Hội chứng, NAME = Hội chứng viêm khớp.
+        Quy tắc loại trừ / ranh giới: Không được hạ đau khớp gối khi vận động xuống TYPE = Triệu chứng nếu đó là triệu chứng khớp rõ; không được đổi NAME thành Hội chứng đau khớp gối, Hội chứng thoái hóa khớp gối hoặc Hội chứng cơ xương khớp.
+        Quy tắc cận lâm sàng: Nếu có X-quang/siêu âm/MRI khớp hoặc CRP trong A14_STATE, gộp vào CẬN_LÂM_SÀNG của hội chứng này.
 
-    C4.11.4. Hội chứng dạ dày - thực quản
-        Lâm sàng: Đau hoặc nóng rát thượng vị, ợ hơi, ợ chua, buồn nôn, nôn, đầy bụng, khó tiêu, đau liên quan bữa ăn hoặc ấn đau vùng thượng vị.
-        Cận lâm sàng: Nội soi dạ dày, test H. pylori hoặc hình ảnh liên quan khi đã có trong A14_STATE.
-        Quy tắc chọn: Chọn canonical TYPE = Hội chứng, NAME = Hội chứng dạ dày - thực quản khi có dữ kiện lâm sàng liên quan đủ rõ.
-        Quy tắc loại trừ / ranh giới: Không chọn nếu chỉ có đau bụng không rõ vị trí; không biến chỉ định nội soi trong A13 thành kết quả.
+    C4.11.3. Hội chứng thắt lưng hông
+        Dữ kiện lâm sàng: Đau vùng cột sống thắt lưng, đau thắt lưng, đau lan mông/lan chân nếu có, đau kiểu rễ nếu có, tê bì chân nếu đi kèm đau thắt lưng hông, vận động cột sống thắt lưng đau hoặc hạn chế.
+        Cận lâm sàng hỗ trợ: X-quang cột sống thắt lưng, siêu âm nếu có dữ kiện liên quan, MRI cột sống thắt lưng, CT cột sống thắt lưng nếu có trong A14_STATE.
+        Quy tắc chọn: Khi có đau vùng cột sống thắt lưng/đau thắt lưng hoặc vận động cột sống thắt lưng đau/hạn chế, chọn TYPE = Hội chứng, NAME = Hội chứng thắt lưng hông.
+        Quy tắc cận lâm sàng: Nếu có X-quang/MRI/CT cột sống thắt lưng trong A14_STATE, gộp vào CẬN_LÂM_SÀNG của hội chứng này.
 
-    C4.11.5. Hội chứng cơ xương khớp
-        Lâm sàng: Đau khớp, sưng khớp, nóng đỏ, cứng khớp, hạn chế vận động, đau tăng khi vận động, đau vùng cổ vai cánh tay, đau cột sống thắt lưng, đau lan kiểu rễ, lạo xạo hoặc biến dạng khớp.
-        Cận lâm sàng: X-quang/MRI/CT/siêu âm cơ xương khớp có thoái hóa, viêm, tràn dịch, tổn thương dây chằng/gân/cơ, hẹp khe khớp, gai xương, thoát vị hoặc chèn ép rễ khi đã có trong A14_STATE.
-        Quy tắc chọn: Chọn tên hội chứng canonical phù hợp nhất với vùng tổn thương và dữ kiện hỗ trợ.
-        Quy tắc loại trừ / ranh giới: Không tạo kết quả hình ảnh từ chỉ định cần làm; nếu chỉ đau đơn độc chưa đủ hội chứng thì tạo TYPE = Triệu chứng.
+    C4.11.4. Hội chứng tiền đình
+        Dữ kiện lâm sàng: Hoa mắt chóng mặt, chóng mặt, đi lại khó khăn, mất thăng bằng nếu có, nghiệm pháp Romberg (+) nếu có.
+        Cận lâm sàng hỗ trợ: Không bắt buộc nếu dữ kiện lâm sàng đủ rõ; chỉ đưa cận lâm sàng khi A14_STATE có kết quả thật liên quan.
+        Quy tắc chọn: Khi có hoa mắt chóng mặt hoặc chóng mặt kèm đi lại khó khăn/mất thăng bằng/Romberg (+), chọn TYPE = Hội chứng, NAME = Hội chứng tiền đình.
+        Quy tắc loại trừ / ranh giới: Nếu chỉ có hoa mắt chóng mặt đơn độc, vẫn được quy về Hội chứng tiền đình theo dictionary mới nếu dữ kiện đang là triệu chứng hiện tại rõ; không được đổi NAME thành Hội chứng rối loạn tiền đình hoặc Hội chứng thần kinh.
 
-    C4.11.6. Hội chứng thần kinh
-        Lâm sàng: Đau đầu, chóng mặt, yếu liệt, tê bì, co giật, rối loạn ý thức, nói khó, nhìn mờ, rối loạn cảm giác/vận động, dấu thần kinh khu trú, dấu màng não hoặc rối loạn tri giác.
-        Cận lâm sàng: CT/MRI sọ não, điện não, xét nghiệm dịch não tủy hoặc cận lâm sàng thần kinh liên quan khi đã có trong A14_STATE.
-        Quy tắc chọn: Chọn khi có triệu chứng thần kinh kèm dấu khám hoặc cận lâm sàng hỗ trợ.
-        Quy tắc loại trừ / ranh giới: Không chọn nếu chỉ có chóng mặt mơ hồ thiếu dữ kiện thần kinh; nếu chỉ có hoa mắt chóng mặt, chưa đủ tiêu chí hội chứng tiền đình, tạo TYPE = Triệu chứng.
+    C4.11.5. Hội chứng viêm dạ dày tá tràng
+        Dữ kiện lâm sàng: Ợ hơi, ợ chua, nóng rát vùng thượng vị, đau thượng vị nếu có, ấn tức vùng thượng vị, dấu hiệu Mendel (+) nếu có, buồn nôn/nôn/đầy bụng/khó tiêu nếu liên quan dữ kiện thật.
+        Cận lâm sàng hỗ trợ: Nội soi dạ dày - tá tràng nếu có, test H. pylori nếu có, kết quả liên quan khác trong A14_STATE nếu có.
+        Quy tắc chọn: Khi có ợ hơi/ợ chua/nóng rát vùng thượng vị/ấn tức vùng thượng vị/dấu hiệu Mendel (+), chọn TYPE = Hội chứng, NAME = Hội chứng viêm dạ dày tá tràng.
+        Quy tắc loại trừ / ranh giới: Không được dùng NAME = Hội chứng dạ dày - thực quản; không hạ thành Triệu chứng tiêu hóa hoặc Triệu chứng trào ngược nếu dữ kiện thuộc nhóm này.
 
-    C4.11.7. Hội chứng chuyển hóa / huyết áp / huyết học
-        Lâm sàng: Khát nhiều, tiểu nhiều, sụt cân, mệt mỏi, nhìn mờ, đau đầu, chóng mặt, hồi hộp, da niêm nhợt, khó thở khi gắng sức hoặc dấu mất nước.
-        Cận lâm sàng: Glucose máu tăng, HbA1c tăng, glucose niệu/ceton niệu, huyết áp hiện tại tăng, điện tim liên quan, Hemoglobin/Hematocrit/hồng cầu giảm hoặc xét nghiệm liên quan khi đã có trong A14_STATE.
-        Quy tắc chọn: Chọn hội chứng canonical tương ứng khi dữ kiện hiện tại đủ rõ.
-        Quy tắc loại trừ / ranh giới: Không chọn chỉ vì tiền sử bệnh nền đang điều trị nếu thiếu biểu hiện hiện tại hoặc cận lâm sàng liên quan.
-
-    C4.11.8. Hội chứng thận - tiết niệu / phù / xuất huyết
-        Lâm sàng: Tiểu buốt, tiểu rắt, tiểu khó, tiểu máu, đau hạ vị, đau hông lưng, phù, tiểu ít, tiểu bọt, tăng cân nhanh, chảy máu, bầm tím hoặc dấu mất máu.
-        Cận lâm sàng: Tổng phân tích nước tiểu, cấy nước tiểu, siêu âm hệ tiết niệu, creatinin/ure/eGFR, protein niệu, albumin, BNP, Hemoglobin, tiểu cầu, đông máu, nội soi/hình ảnh xác định nguồn chảy máu khi đã có trong A14_STATE.
-        Quy tắc chọn: Chọn hội chứng canonical tương ứng khi lâm sàng hoặc cận lâm sàng đủ hỗ trợ.
-        Quy tắc loại trừ / ranh giới: Không suy nguyên nhân ngoài dữ kiện; không biến chỉ định cần làm thành kết quả.
+    C4.11.6. Hội chứng tăng glucose máu
+        Dữ kiện lâm sàng: Khát nhiều, uống nhiều, tiểu nhiều, mệt mỏi liên quan tăng đường máu, sụt cân nếu có, nhìn mờ nếu có, tê bì/dị cảm nếu dữ kiện hiện tại có thật và liên quan.
+        Cận lâm sàng hỗ trợ: Glucose máu tăng, HbA1c tăng trong A14_STATE.
+        Quy tắc chọn: Khi có triệu chứng tăng glucose máu hoặc xét nghiệm glucose máu/HbA1c tăng trong A14_STATE, chọn TYPE = Hội chứng, NAME = Hội chứng tăng glucose máu.
+        Quy tắc loại trừ / ranh giới: Không được đổi NAME thành Hội chứng tăng đường huyết; không đưa đái tháo đường typ 2 chỉ từ tiền sử/chẩn đoán nền vào C4 nếu không có triệu chứng hiện tại hoặc xét nghiệm glucose/HbA1c liên quan.
 
 C4.12. Schema C4_ITEMS
     C4_ITEMS là cấu trúc nội dung chuẩn, không phải output cuối.
@@ -3099,8 +3103,8 @@ C4.12. Schema C4_ITEMS
         8. Nếu cả LÂM_SÀNG và CẬN_LÂM_SÀNG đều NONE thì item không được PASS.
         9. Không ghi placeholder kiểu “chưa có”, “không có”, “nếu có”.
         10. Không dùng chẩn đoán A12, tiền sử hoặc ICD nền thay hội chứng hiện tại.
-        11. Nếu dữ kiện đủ tiêu chí hội chứng trong C4_SYNDROME_DICTIONARY thì bắt buộc TYPE = Hội chứng và NAME = tên hội chứng canonical.
-        12. Nếu chưa đủ hội chứng nhưng có triệu chứng thật cần đưa vào O2 thì tạo TYPE = Triệu chứng.
+        11. Nếu dữ kiện đủ tiêu chí một trong 6 hội chứng chuẩn trong C4_SYNDROME_DICTIONARY thì bắt buộc TYPE = Hội chứng và NAME = đúng tên canonical exact-match.
+        12. Nếu có triệu chứng thật cần đưa vào O2 nhưng không đủ điều kiện vào bất kỳ hội chứng nào trong 6 hội chứng chuẩn thì tạo TYPE = Triệu chứng.
         13. TYPE = Cận lâm sàng chỉ dùng cho kết quả đã có từ A14_STATE không ghép trực tiếp vào hội chứng nào.
         14. Mỗi C4_ITEM phải có TYPE, NAME, ORDER, LÂM_SÀNG, CẬN_LÂM_SÀNG, ITEM_CHECK và ITEM_ERROR.
         15. LÂM_SÀNG và CẬN_LÂM_SÀNG bắt buộc dùng dấu hai chấm đúng field “LÂM_SÀNG:” và “CẬN_LÂM_SÀNG:”; nếu runtime dùng dấu bằng cho hai field này thì C4_CHECK = NEEDS_FIX với ERR-C4-FIELD-SYNTAX.
@@ -3276,8 +3280,8 @@ C4.19. C4_CHECK mới
         10. Không render NONE trong C4_FOR_O2.
         11. Không render dòng top-level bắt đầu bằng “- Triệu chứng”.
         12. Không render “Hoa mắt chóng mặt:” nếu item là TYPE = Triệu chứng.
-        13. Không render triệu chứng tiêu hóa/trào ngược thành NAME triệu chứng khi đủ tiêu chí Hội chứng dạ dày - thực quản.
-        14. Không hạ hội chứng đủ tiêu chí xuống TYPE = Triệu chứng.
+        13. Không render triệu chứng tiêu hóa/trào ngược thành NAME triệu chứng khi đủ tiêu chí Hội chứng viêm dạ dày tá tràng; không dùng NAME = Hội chứng dạ dày - thực quản.
+        14. Không hạ dữ kiện thuộc một trong 6 hội chứng chuẩn xuống TYPE = Triệu chứng.
         15. Không đưa bệnh nền, tiền sử hoặc chẩn đoán nền vào C4_FOR_O2 nếu không có biểu hiện hiện tại.
         16. Dòng cha top-level bắt đầu bằng “-”; dòng con hội chứng thụt đúng 2 khoảng trắng trước dấu “+”.
         17. Cận lâm sàng chỉ lấy từ A14_STATE và không dùng A13 làm kết quả đã có.
@@ -3287,7 +3291,12 @@ C4.19. C4_CHECK mới
         21. Không có Hội chứng nào xuất hiện sau Triệu chứng hoặc sau Cận lâm sàng rời.
         22. Không có Triệu chứng nào xuất hiện sau Cận lâm sàng rời.
         23. ORDER trong C4_ITEMS phản ánh đúng thứ tự render cuối cùng hoặc có GROUP_ORDER/rule rõ để kiểm thứ tự group; nếu C4_FOR_O2 không khớp ORDER/group order trong C4_ITEMS thì không được PASS.
-        24. Không render O2.
+        24. TYPE = Hội chứng chỉ PASS khi NAME exact-match một trong 6 hội chứng chuẩn: Hội chứng cổ vai cánh tay / Hội chứng viêm khớp / Hội chứng thắt lưng hông / Hội chứng tiền đình / Hội chứng viêm dạ dày tá tràng / Hội chứng tăng glucose máu.
+        25. Không dùng hội chứng cũ hoặc tên ngoài danh sách như Hội chứng đau khớp gối, Hội chứng thoái hóa khớp gối, Hội chứng cơ xương khớp, Hội chứng dạ dày - thực quản, Hội chứng tăng đường huyết, Hội chứng rối loạn tiền đình, Hội chứng cổ vai gáy.
+        26. Không tự sửa/tùy biến NAME hội chứng; không tạo hội chứng ngoài danh sách mới.
+        27. Không hạ dữ kiện thuộc 6 hội chứng chuẩn xuống TYPE = Triệu chứng, gồm đau khớp gối khi vận động, ợ hơi/ợ chua/nóng rát thượng vị, đau vùng cổ/cột sống cổ, đau thắt lưng, hoa mắt chóng mặt hiện tại rõ, glucose máu/HbA1c tăng hoặc triệu chứng tăng glucose.
+        28. C4_FOR_O2 không có hội chứng ngoài danh sách mới và phải khớp C4_ITEMS sau khi đổi NAME canonical.
+        29. Không render O2.
     Nếu sai bất kỳ điểm nào trên:
         C4_CHECK = NEEDS_FIX, không được PASS.
         C4_ERROR phải ghi rõ lỗi thuộc nhóm:
@@ -3301,16 +3310,23 @@ C4.19. C4_CHECK mới
             - Sai thứ tự TYPE_GROUP_ORDER / ERR-C4-TYPE-GROUP-ORDER.
             - Nguồn cận lâm sàng.
             - Ranh giới A/C/O.
+            - NAME hội chứng không thuộc danh sách / ERR-C4-SYNDROME-NAME-NOT-IN-LIST.
+            - Dictionary hội chứng cũ / ERR-C4-LEGACY-SYNDROME-DICTIONARY.
+            - NAME hội chứng bị sửa/tùy biến / ERR-C4-SYNDROME-NAME-MODIFIED.
+            - Hạ hội chứng chuẩn xuống triệu chứng / ERR-C4-SYNDROME-DOWNGRADED-TO-SYMPTOM.
 
 C4.20. NAME/TYPE canonical theo C4_SYNDROME_DICTIONARY
-    Nếu dữ kiện đủ tiêu chí hội chứng trong C4_SYNDROME_DICTIONARY thì bắt buộc TYPE = Hội chứng và NAME = tên hội chứng canonical.
-    Nếu chưa đủ hội chứng nhưng có triệu chứng thật thì TYPE = Triệu chứng.
+    Nếu dữ kiện đủ tiêu chí một trong 6 hội chứng chuẩn trong C4_SYNDROME_DICTIONARY thì bắt buộc TYPE = Hội chứng và NAME = đúng tên canonical exact-match.
+    Nếu có triệu chứng thật nhưng không đủ điều kiện vào bất kỳ hội chứng nào trong 6 hội chứng chuẩn thì TYPE = Triệu chứng.
     Nếu là kết quả cận lâm sàng rời thì TYPE = Cận lâm sàng.
-    Không được đổi tên hội chứng thành tên triệu chứng tự do.
-    Với ợ hơi, ợ chua, nóng rát thượng vị hoặc ấn tức thượng vị đủ rõ: chọn TYPE = Hội chứng, NAME = Hội chứng dạ dày - thực quản; không hạ thành triệu chứng tiêu hóa/trào ngược.
-    Với đau khớp gối khi vận động kèm lạo xạo xương hoặc dữ kiện thoái hóa khớp gối: chọn TYPE = Hội chứng, NAME = tên hội chứng cơ xương khớp canonical phù hợp như Hội chứng đau khớp gối / thoái hóa khớp gối; không hạ thành triệu chứng đau khớp gối đơn lẻ.
-    Với hoa mắt chóng mặt đơn độc chưa đủ hội chứng: chọn TYPE = Triệu chứng, NAME = Hoa mắt chóng mặt, nhưng C4_FOR_O2 chỉ render trực tiếp LÂM_SÀNG.
+    Không được đổi tên hội chứng thành tên triệu chứng tự do, tên gần đúng, tên theo vị trí/tổn thương hoặc biến thể ngoài 6 tên canonical.
+    Với ợ hơi, ợ chua, nóng rát thượng vị hoặc ấn tức thượng vị đủ rõ: chọn TYPE = Hội chứng, NAME = Hội chứng viêm dạ dày tá tràng; không hạ thành triệu chứng tiêu hóa/trào ngược và không dùng NAME = Hội chứng dạ dày - thực quản.
+    Với đau khớp gối khi vận động hoặc triệu chứng khớp rõ: chọn TYPE = Hội chứng, NAME = Hội chứng viêm khớp; không hạ thành triệu chứng đau khớp gối đơn lẻ và không dùng NAME = Hội chứng đau khớp gối / Hội chứng thoái hóa khớp gối / Hội chứng cơ xương khớp.
+    Với hoa mắt chóng mặt là triệu chứng hiện tại rõ: chọn TYPE = Hội chứng, NAME = Hội chứng tiền đình; không hạ thành TYPE = Triệu chứng và không dùng NAME = Hội chứng rối loạn tiền đình hoặc Hội chứng thần kinh.
     Bệnh nền đái tháo đường hoặc đa dây thần kinh do đái tháo đường không được đưa vào C4 nếu chỉ là tiền sử/chẩn đoán nền, không có triệu chứng hiện tại hoặc cận lâm sàng liên quan; nếu C4_FOR_O2 đưa bệnh nền từ A12/tiền sử vào không có biểu hiện hiện tại thì C4_CHECK = NEEDS_FIX.
+    Với đau vùng cổ/cột sống cổ/vận động cổ đau: chọn TYPE = Hội chứng, NAME = Hội chứng cổ vai cánh tay.
+    Với đau thắt lưng/đau vùng cột sống thắt lưng/vận động cột sống thắt lưng đau: chọn TYPE = Hội chứng, NAME = Hội chứng thắt lưng hông.
+    Với glucose máu tăng, HbA1c tăng hoặc triệu chứng tăng glucose máu: chọn TYPE = Hội chứng, NAME = Hội chứng tăng glucose máu; không dùng NAME = Hội chứng tăng đường huyết.
     Không có nhóm vá riêng ngoài dictionary; tiêu chí từng hội chứng đã nằm trong C4_SYNDROME_DICTIONARY.
 
 C4.21. Ví dụ PASS — item hội chứng
@@ -3328,9 +3344,9 @@ C4.22. Ví dụ PASS — item triệu chứng và cận lâm sàng
     Ví dụ chỉ minh họa format runtime đúng, không phải dữ kiện mặc định.
     C4_ITEM_2:
         TYPE = Triệu chứng
-        NAME = Hoa mắt chóng mặt
+        NAME = Ho khan
         ORDER = 2
-        LÂM_SÀNG: Hoa mắt chóng mặt tăng, đi lại khó khăn.
+        LÂM_SÀNG: Ho khan từng cơn về đêm.
         CẬN_LÂM_SÀNG: NONE
         ITEM_CHECK = PASS
         ITEM_ERROR = NONE
@@ -3360,15 +3376,15 @@ C4.23. Ví dụ C4_STATE chuẩn
                 ITEM_ERROR = NONE
             C4_ITEM_2:
                 TYPE = Hội chứng
-                NAME = Hội chứng dạ dày - thực quản
+                NAME = Hội chứng viêm dạ dày tá tràng
                 ORDER = 2
                 LÂM_SÀNG: Ợ hơi, ợ chua, nóng rát vùng thượng vị, ấn tức vùng thượng vị.
                 CẬN_LÂM_SÀNG: NONE
                 ITEM_CHECK = PASS
                 ITEM_ERROR = NONE
             C4_ITEM_3:
-                TYPE = Triệu chứng
-                NAME = Hoa mắt chóng mặt
+                TYPE = Hội chứng
+                NAME = Hội chứng tiền đình
                 ORDER = 3
                 LÂM_SÀNG: Hoa mắt chóng mặt tăng, đi lại khó khăn.
                 CẬN_LÂM_SÀNG: NONE
@@ -3386,9 +3402,10 @@ C4.23. Ví dụ C4_STATE chuẩn
             - Hội chứng viêm khớp:
               + Khớp vai trái sưng đau, vận động đau tăng, ấn khe khớp đau.
               + MRI khớp vai: tụ dịch, rách bán phần dây chằng/gân cơ dưới vai.
-            - Hội chứng dạ dày - thực quản:
+            - Hội chứng viêm dạ dày tá tràng:
               + Ợ hơi, ợ chua, nóng rát vùng thượng vị, ấn tức vùng thượng vị.
-            - Hoa mắt chóng mặt tăng, đi lại khó khăn.
+            - Hội chứng tiền đình:
+              + Hoa mắt chóng mặt tăng, đi lại khó khăn.
             - X-quang ngực: tim phổi chưa phát hiện tổn thương.
         C4_CHECK = PASS
         C4_ERROR = NONE
@@ -3424,10 +3441,10 @@ C4.24. Ví dụ FAIL và kết thúc module
         C4_CHECK = NEEDS_FIX.
         C4_ERROR = ERR-C4-FIELD-SYNTAX; C4_ITEM phải là block C4_ITEM_N.
 
-    C4.24.7. FAIL vì hạ hội chứng dạ dày - thực quản thành triệu chứng
-        Dữ kiện có ợ hơi, ợ chua, nóng rát thượng vị hoặc ấn tức thượng vị đủ rõ nhưng C4_ITEMS chọn TYPE = Triệu chứng và NAME = Triệu chứng tiêu hóa trên hoặc NAME = Triệu chứng trào ngược dạ dày - thực quản.
+    C4.24.7. FAIL vì hạ hội chứng viêm dạ dày tá tràng thành triệu chứng hoặc dùng tên cũ
+        Dữ kiện có ợ hơi, ợ chua, nóng rát thượng vị hoặc ấn tức thượng vị đủ rõ nhưng C4_ITEMS chọn TYPE = Triệu chứng, NAME = Triệu chứng tiêu hóa trên, NAME = Triệu chứng trào ngược dạ dày - thực quản hoặc NAME = Hội chứng dạ dày - thực quản.
         C4_CHECK = NEEDS_FIX.
-        C4_ERROR = ERR-C4-TYPE-RENDER; dữ kiện đủ hội chứng phải chọn Hội chứng dạ dày - thực quản.
+        C4_ERROR = ERR-C4-SYNDROME-DOWNGRADED-TO-SYMPTOM hoặc ERR-C4-LEGACY-SYNDROME-DICTIONARY; dữ kiện đủ hội chứng phải chọn Hội chứng viêm dạ dày tá tràng.
 
     C4.24.8. FAIL vì đưa bệnh nền từ tiền sử/chẩn đoán nền
         C4_FOR_O2 đưa bệnh đa dây thần kinh do đái tháo đường hoặc Bệnh lý thần kinh ngoại biên do đái tháo đường chỉ từ A12/tiền sử, không có triệu chứng hiện tại hoặc cận lâm sàng liên quan.
@@ -3439,7 +3456,7 @@ C4.24. Ví dụ FAIL và kết thúc module
             - Hội chứng cổ vai cánh tay:
               + Đau vùng cổ vai cánh tay...
             - Hoa mắt chóng mặt tăng trước vào viện.
-            - Hội chứng dạ dày - thực quản:
+            - Hội chứng viêm dạ dày tá tràng:
               + Ợ hơi, ợ chua, nóng rát vùng thượng vị.
         Lỗi:
             - TYPE = Triệu chứng xuất hiện trước khi render hết TYPE = Hội chứng.
@@ -3454,6 +3471,21 @@ C4.24. Ví dụ FAIL và kết thúc module
             - TYPE = Cận lâm sàng rời phải đứng cuối cùng.
             - C4_CHECK phải NEEDS_FIX.
             - C4_ERROR = ERR-C4-TYPE-GROUP-ORDER.
+
+    C4.24.11. FAIL vì dùng NAME không trong danh sách hội chứng chuẩn
+        C4_ITEM TYPE = Hội chứng, NAME = Hội chứng đau khớp gối.
+        C4_CHECK = NEEDS_FIX.
+        C4_ERROR = ERR-C4-SYNDROME-NAME-NOT-IN-LIST; NAME hội chứng phải exact-match một trong 6 hội chứng chuẩn.
+
+    C4.24.12. FAIL vì sửa/tùy biến tên hội chứng
+        C4_ITEM TYPE = Hội chứng, NAME = Hội chứng tăng đường huyết.
+        C4_CHECK = NEEDS_FIX.
+        C4_ERROR = ERR-C4-SYNDROME-NAME-MODIFIED; phải dùng NAME = Hội chứng tăng glucose máu.
+
+    C4.24.13. FAIL vì hạ hội chứng chuẩn xuống triệu chứng
+        Dữ kiện đau khớp gối khi vận động nhưng C4_ITEMS chọn TYPE = Triệu chứng.
+        C4_CHECK = NEEDS_FIX.
+        C4_ERROR = ERR-C4-SYNDROME-DOWNGRADED-TO-SYMPTOM; đau khớp gối khi vận động phải quy về Hội chứng viêm khớp.
 
     C4 hoàn tất khi:
         1. Đã tạo mới, cập nhật hoặc dùng lại C4_STATE.
