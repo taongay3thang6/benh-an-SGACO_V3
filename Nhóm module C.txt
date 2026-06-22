@@ -3076,8 +3076,12 @@ C4.11. C4_SYNDROME_DICTIONARY
 
     C4.11.6. Hội chứng tăng glucose máu
         Dữ kiện lâm sàng: Khát nhiều, uống nhiều, tiểu nhiều, mệt mỏi liên quan tăng đường máu, sụt cân nếu có, nhìn mờ nếu có, tê bì/dị cảm nếu dữ kiện hiện tại có thật và liên quan.
-        Cận lâm sàng hỗ trợ: Glucose máu tăng, HbA1c tăng trong A14_STATE.
-        Quy tắc chọn: Khi có triệu chứng tăng glucose máu hoặc xét nghiệm glucose máu/HbA1c tăng trong A14_STATE, chọn TYPE = Hội chứng, NAME = Hội chứng tăng glucose máu.
+        Cận lâm sàng hỗ trợ: Glucose máu tăng, đường máu tăng, tăng glucose máu, tăng đường máu, HbA1c tăng, đường máu tại nhà dao động cao rõ, glucose/HbA1c numeric cao rõ hoặc A14_STATE đánh dấu bất thường/tăng.
+        Trigger textual bắt buộc: glucose máu tăng; đường máu tăng; HbA1c tăng; tăng glucose máu; tăng đường máu.
+        Trigger numeric/current-data bắt buộc: đường máu tại nhà dao động cao rõ như 15-20 mmol/L; glucose máu có giá trị cao rõ như 18,4 mmol/L; HbA1c có giá trị cao rõ như 9,7%; mọi glucose/HbA1c numeric cao rõ hoặc được A14_STATE đánh dấu bất thường/tăng.
+        Quy tắc chọn: Khi có triệu chứng tăng glucose máu hoặc xét nghiệm glucose máu/đường máu tại nhà/HbA1c tăng hoặc cao rõ trong dữ kiện hiện tại hợp lệ từ A_STATE/A14_STATE, chọn TYPE = Hội chứng, NAME = Hội chứng tăng glucose máu.
+        Quy tắc cận lâm sàng: Đưa đúng dữ kiện xét nghiệm glucose máu/đường máu tại nhà/HbA1c đã có vào CẬN_LÂM_SÀNG của hội chứng; không để các dữ kiện này thành TYPE = Cận lâm sàng rời nếu đủ trigger Hội chứng tăng glucose máu.
+        Quy tắc không tự tạo: Chỉ dùng giá trị đã có trong A14_STATE hoặc state hợp lệ; không tự suy diễn thêm xét nghiệm, trị số hoặc bất thường không có trong nguồn.
         Quy tắc loại trừ / ranh giới: Không được đổi NAME thành Hội chứng tăng đường huyết; không đưa đái tháo đường typ 2 chỉ từ tiền sử/chẩn đoán nền vào C4 nếu không có triệu chứng hiện tại hoặc xét nghiệm glucose/HbA1c liên quan.
 
 C4.12. Schema C4_ITEMS
@@ -3117,16 +3121,22 @@ C4.12. Schema C4_ITEMS
         22. Trước khi một C4_ITEM TYPE = Triệu chứng được ITEM_CHECK = PASS, bắt buộc so NAME và LÂM_SÀNG của item đó với toàn bộ trigger của 6 hội chứng chuẩn trong C4_SYNDROME_DICTIONARY.
         23. TYPE = Triệu chứng chỉ được PASS sau khi đã xác nhận âm tính với toàn bộ trigger của 6 hội chứng chuẩn; nếu NAME hoặc LÂM_SÀNG khớp trigger của bất kỳ hội chứng chuẩn nào thì item TYPE = Triệu chứng không được PASS.
         24. Khi TYPE = Triệu chứng khớp trigger hội chứng chuẩn, phải chuyển item thành TYPE = Hội chứng với NAME canonical đúng nếu đang tạo C4_STATE; nếu không tự sửa trong runtime hiện tại thì ITEM_CHECK = NEEDS_FIX và ITEM_ERROR = ERR-C4-SYNDROME-DOWNGRADED-TO-SYMPTOM.
-        25. Trigger bắt buộc chặn downgrade sang TYPE = Triệu chứng:
+        25. Trước khi một C4_ITEM TYPE = Cận lâm sàng được ITEM_CHECK = PASS, bắt buộc so NAME và CẬN_LÂM_SÀNG của item đó với toàn bộ trigger của 6 hội chứng chuẩn trong C4_SYNDROME_DICTIONARY.
+        26. TYPE = Cận lâm sàng chỉ được PASS sau khi đã xác nhận âm tính với toàn bộ trigger hội chứng chuẩn hoặc đã chứng minh đây là kết quả rời không ghép trực tiếp hội chứng nào; nếu NAME hoặc CẬN_LÂM_SÀNG khớp trigger của bất kỳ hội chứng chuẩn nào thì item TYPE = Cận lâm sàng không được PASS.
+        27. Khi TYPE = Cận lâm sàng khớp trigger hội chứng chuẩn, phải chuyển/gộp item thành TYPE = Hội chứng với NAME canonical đúng nếu đang tạo C4_STATE; nếu không tự sửa trong runtime hiện tại thì ITEM_CHECK = NEEDS_FIX và ITEM_ERROR = ERR-C4-SYNDROME-DOWNGRADED-TO-ISOLATED-CLS.
+        28. ERR-C4-SYNDROME-DOWNGRADED-TO-ISOLATED-CLS áp dụng khi cận lâm sàng đáng lẽ phải tạo/gộp hội chứng nhưng bị để cô lập thành TYPE = Cận lâm sàng; ERR-C4-DUPLICATE-CLS-ALREADY-IN-SYNDROME vẫn dùng khi cùng nội dung cận lâm sàng đã nằm trong CẬN_LÂM_SÀNG của TYPE = Hội chứng nhưng bị tạo lặp thành item rời.
+        29. Rule scan TYPE = Cận lâm sàng áp dụng cho mọi hội chứng chuẩn: MRI/CT/X-quang cột sống cổ liên quan Hội chứng cổ vai cánh tay; X-quang/siêu âm/MRI khớp hoặc CRP liên quan Hội chứng viêm khớp; MRI/X-quang cột sống thắt lưng liên quan Hội chứng thắt lưng hông; glucose máu/đường máu tại nhà/HbA1c tăng hoặc cao rõ liên quan Hội chứng tăng glucose máu.
+        30. Nếu TYPE = Cận lâm sàng chứa glucose máu tăng, đường máu tăng, tăng glucose máu, tăng đường máu, HbA1c tăng, đường máu tại nhà dao động cao rõ, glucose máu numeric cao rõ hoặc HbA1c numeric cao rõ thì bắt buộc là TYPE = Hội chứng, NAME = Hội chứng tăng glucose máu; nếu không, ITEM_ERROR = ERR-C4-SYNDROME-DOWNGRADED-TO-ISOLATED-CLS.
+        31. Trigger bắt buộc chặn downgrade sang TYPE = Triệu chứng hoặc TYPE = Cận lâm sàng rời:
             a. Hội chứng cổ vai cánh tay: đau vùng cổ; đau cột sống cổ; đau vùng cổ vai; đau vùng cổ vai cánh tay; đau lan vai/cánh tay; vận động cột sống cổ đau; vận động cúi/ngửa/quay cột sống cổ giảm hoặc đau; co cứng cơ cạnh sống cổ. Nếu xuất hiện các trigger này trong TYPE = Triệu chứng thì invalid, phải là TYPE = Hội chứng, NAME = Hội chứng cổ vai cánh tay; nếu không, ITEM_ERROR = ERR-C4-SYNDROME-DOWNGRADED-TO-SYMPTOM.
             b. Hội chứng viêm khớp: đau khớp; đau khớp gối; đau khớp gối hai bên; đau khớp khi vận động; đau tăng khi vận động tại khớp; vận động khớp đau tăng; hạn chế vận động khớp; lạo xạo khớp; lạo xạo xương; sưng khớp/nóng khớp/đỏ khớp/đau khớp; tràn dịch khớp/cứng khớp. Nếu xuất hiện các trigger này trong TYPE = Triệu chứng thì invalid, phải là TYPE = Hội chứng, NAME = Hội chứng viêm khớp; nếu không, ITEM_ERROR = ERR-C4-SYNDROME-DOWNGRADED-TO-SYMPTOM. “Đau khớp gối hai bên, đau tăng khi vận động, vận động khớp gối đau tăng, lạo xạo xương (+)” là Hội chứng viêm khớp, không được là Triệu chứng.
             c. Hội chứng thắt lưng hông: đau vùng cột sống thắt lưng; đau thắt lưng; đau lưng lan mông; đau lan chân; đau kiểu rễ; vận động cột sống thắt lưng đau hoặc hạn chế; tê bì chân đi kèm đau thắt lưng hông. Nếu xuất hiện các trigger này trong TYPE = Triệu chứng thì invalid, phải là TYPE = Hội chứng, NAME = Hội chứng thắt lưng hông; nếu không, ITEM_ERROR = ERR-C4-SYNDROME-DOWNGRADED-TO-SYMPTOM.
             d. Hội chứng tiền đình: hoa mắt chóng mặt; chóng mặt; đi lại khó khăn do chóng mặt; mất thăng bằng; Romberg (+); nghiệm pháp Romberg (+). Nếu xuất hiện các trigger này trong TYPE = Triệu chứng thì invalid, phải là TYPE = Hội chứng, NAME = Hội chứng tiền đình; nếu không, ITEM_ERROR = ERR-C4-SYNDROME-DOWNGRADED-TO-SYMPTOM. Hoa mắt chóng mặt hiện tại rõ không được ITEM_CHECK = PASS dưới TYPE = Triệu chứng.
             e. Hội chứng viêm dạ dày tá tràng: ợ hơi; ợ chua; nóng rát vùng thượng vị; đau thượng vị; ấn tức vùng thượng vị; dấu hiệu Mendel (+); Mendel (+). Nếu xuất hiện các trigger này trong TYPE = Triệu chứng thì invalid, phải là TYPE = Hội chứng, NAME = Hội chứng viêm dạ dày tá tràng; nếu không, ITEM_ERROR = ERR-C4-SYNDROME-DOWNGRADED-TO-SYMPTOM. NAME = Triệu chứng tiêu hóa trên không được PASS nếu LÂM_SÀNG có ợ hơi/ợ chua/nóng rát thượng vị/ấn tức thượng vị/Mendel (+).
-            f. Hội chứng tăng glucose máu: glucose máu tăng; đường máu tăng; HbA1c tăng; khát nhiều; uống nhiều; tiểu nhiều; mệt mỏi liên quan tăng đường máu; sụt cân liên quan tăng glucose; nhìn mờ liên quan tăng glucose. Nếu xuất hiện các trigger này trong TYPE = Triệu chứng thì invalid, phải là TYPE = Hội chứng, NAME = Hội chứng tăng glucose máu; nếu không, ITEM_ERROR = ERR-C4-SYNDROME-DOWNGRADED-TO-SYMPTOM.
-        26. TYPE = Cận lâm sàng chỉ được ITEM_CHECK = PASS nếu CẬN_LÂM_SÀNG của item đó không trùng và không đã được gộp vào bất kỳ CẬN_LÂM_SÀNG nào của TYPE = Hội chứng.
-        27. Nếu cùng một kết quả A14_STATE hoặc cùng nội dung cận lâm sàng đã nằm trong CẬN_LÂM_SÀNG của một hội chứng, không được tạo item TYPE = Cận lâm sàng rời; nếu vẫn tạo item rời thì ITEM_CHECK = NEEDS_FIX và ITEM_ERROR = ERR-C4-DUPLICATE-CLS-ALREADY-IN-SYNDROME.
-        28. Nếu bất kỳ ITEM_CHECK = NEEDS_FIX thì C4_CHECK bắt buộc = NEEDS_FIX; C4_CHECK không được PASS khi còn ITEM_ERROR semantic classification hoặc duplicate cận lâm sàng.
+            f. Hội chứng tăng glucose máu: glucose máu tăng; đường máu tăng; HbA1c tăng; tăng glucose máu; tăng đường máu; đường máu tại nhà dao động cao rõ; glucose máu numeric cao rõ; HbA1c numeric cao rõ; A14_STATE đánh dấu glucose/HbA1c bất thường/tăng; khát nhiều; uống nhiều; tiểu nhiều; mệt mỏi liên quan tăng đường máu; sụt cân liên quan tăng glucose; nhìn mờ liên quan tăng glucose. Nếu xuất hiện các trigger này trong TYPE = Triệu chứng thì invalid, phải là TYPE = Hội chứng, NAME = Hội chứng tăng glucose máu; nếu không, ITEM_ERROR = ERR-C4-SYNDROME-DOWNGRADED-TO-SYMPTOM. Nếu xuất hiện các trigger cận lâm sàng glucose/HbA1c/đường máu cao rõ trong TYPE = Cận lâm sàng thì invalid, phải là TYPE = Hội chứng, NAME = Hội chứng tăng glucose máu; nếu không, ITEM_ERROR = ERR-C4-SYNDROME-DOWNGRADED-TO-ISOLATED-CLS.
+        32. TYPE = Cận lâm sàng chỉ được ITEM_CHECK = PASS nếu CẬN_LÂM_SÀNG của item đó không trùng và không đã được gộp vào bất kỳ CẬN_LÂM_SÀNG nào của TYPE = Hội chứng.
+        33. Nếu cùng một kết quả A14_STATE hoặc cùng nội dung cận lâm sàng đã nằm trong CẬN_LÂM_SÀNG của một hội chứng, không được tạo item TYPE = Cận lâm sàng rời; nếu vẫn tạo item rời thì ITEM_CHECK = NEEDS_FIX và ITEM_ERROR = ERR-C4-DUPLICATE-CLS-ALREADY-IN-SYNDROME.
+        34. Nếu bất kỳ ITEM_CHECK = NEEDS_FIX thì C4_CHECK bắt buộc = NEEDS_FIX; C4_CHECK không được PASS khi còn ITEM_ERROR semantic classification hoặc duplicate cận lâm sàng.
 
 C4.13. Quy tắc render C4_FOR_O2 từ C4_ITEMS
     C4_FOR_O2 bắt buộc được render từ C4_ITEMS, không được tự viết tự do.
@@ -3288,10 +3298,11 @@ C4.19. C4_CHECK mới
     C4_CHECK phải kiểm cả C4_ITEMS và C4_FOR_O2.
     C4_CHECK = PASS chỉ khi qua đủ 3 tầng validation bắt buộc:
         - Tầng 1 — Schema/render validation: giữ đầy đủ điều kiện schema C4_ITEMS, format C4_FOR_O2, label leak, NONE, TYPE_GROUP_ORDER và boundary source.
-        - Tầng 2 — Semantic dictionary validation: bắt buộc scan toàn bộ C4_ITEMS trước khi PASS; với mọi item TYPE = Triệu chứng, so NAME và LÂM_SÀNG với trigger của 6 hội chứng chuẩn; nếu match bất kỳ trigger hội chứng nào thì C4_CHECK = NEEDS_FIX và C4_ERROR = ERR-C4-SYNDROME-DOWNGRADED-TO-SYMPTOM.
+        - Tầng 2 — Semantic dictionary validation: bắt buộc scan toàn bộ C4_ITEMS trước khi PASS; với mọi item TYPE = Triệu chứng, so NAME và LÂM_SÀNG với trigger của 6 hội chứng chuẩn; với mọi item TYPE = Cận lâm sàng, so NAME và CẬN_LÂM_SÀNG với trigger của 6 hội chứng chuẩn. Nếu TYPE = Triệu chứng match trigger hội chứng thì C4_CHECK = NEEDS_FIX và C4_ERROR = ERR-C4-SYNDROME-DOWNGRADED-TO-SYMPTOM; nếu TYPE = Cận lâm sàng match trigger hội chứng thì C4_CHECK = NEEDS_FIX và C4_ERROR = ERR-C4-SYNDROME-DOWNGRADED-TO-ISOLATED-CLS.
         - Tầng 3 — Duplicate cận lâm sàng validation: bắt buộc scan CẬN_LÂM_SÀNG của tất cả C4_ITEMS; nếu một nội dung cận lâm sàng đã xuất hiện trong TYPE = Hội chứng và lại xuất hiện trong TYPE = Cận lâm sàng rời thì C4_CHECK = NEEDS_FIX và C4_ERROR = ERR-C4-DUPLICATE-CLS-ALREADY-IN-SYNDROME.
     C4_CHECK không được PASS nếu C4_FOR_O2 render đúng format nhưng C4_ITEMS sai classification.
-    C4_CHECK không được PASS chỉ vì C4_FOR_O2 khớp C4_ITEMS, nếu bản thân C4_ITEMS đã hạ hội chứng xuống Triệu chứng hoặc lặp cận lâm sàng đã ghép hội chứng.
+    C4_CHECK không được PASS chỉ vì C4_FOR_O2 khớp C4_ITEMS, nếu bản thân C4_ITEMS đã hạ hội chứng xuống Triệu chứng, hạ hội chứng xuống Cận lâm sàng rời hoặc lặp cận lâm sàng đã ghép hội chứng.
+    C4_CHECK không được PASS nếu C4_ITEMS để glucose máu/đường máu tại nhà/HbA1c tăng hoặc cao rõ thành TYPE = Cận lâm sàng rời, hoặc không tạo TYPE = Hội chứng, NAME = Hội chứng tăng glucose máu khi dữ kiện hiện tại hợp lệ đủ trigger.
     Tất cả ITEM_CHECK phải PASS thì C4_CHECK mới được PASS; nếu bất kỳ ITEM_CHECK = NEEDS_FIX thì C4_CHECK bắt buộc = NEEDS_FIX.
     Nếu C4_ERROR lẽ ra có lỗi semantic classification hoặc duplicate cận lâm sàng thì không được ghi C4_ERROR = NONE.
     C4_CHECK = PASS chỉ khi:
@@ -3321,12 +3332,13 @@ C4.19. C4_CHECK mới
         24. TYPE = Hội chứng chỉ PASS khi NAME exact-match một trong 6 hội chứng chuẩn: Hội chứng cổ vai cánh tay / Hội chứng viêm khớp / Hội chứng thắt lưng hông / Hội chứng tiền đình / Hội chứng viêm dạ dày tá tràng / Hội chứng tăng glucose máu.
         25. Không dùng hội chứng cũ hoặc tên ngoài danh sách như Hội chứng đau khớp gối, Hội chứng thoái hóa khớp gối, Hội chứng cơ xương khớp, Hội chứng dạ dày - thực quản, Hội chứng tăng đường huyết, Hội chứng rối loạn tiền đình, Hội chứng cổ vai gáy.
         26. Không tự sửa/tùy biến NAME hội chứng; không tạo hội chứng ngoài danh sách mới.
-        27. Không hạ dữ kiện thuộc 6 hội chứng chuẩn xuống TYPE = Triệu chứng, gồm đau khớp gối khi vận động, ợ hơi/ợ chua/nóng rát thượng vị, đau vùng cổ/cột sống cổ, đau thắt lưng, hoa mắt chóng mặt hiện tại rõ, glucose máu/HbA1c tăng hoặc triệu chứng tăng glucose.
+        27. Không hạ dữ kiện thuộc 6 hội chứng chuẩn xuống TYPE = Triệu chứng hoặc TYPE = Cận lâm sàng rời, gồm đau khớp gối khi vận động, ợ hơi/ợ chua/nóng rát thượng vị, đau vùng cổ/cột sống cổ, đau thắt lưng, hoa mắt chóng mặt hiện tại rõ, glucose máu/đường máu tại nhà/HbA1c tăng hoặc cao rõ hoặc triệu chứng tăng glucose.
         28. C4_FOR_O2 không có hội chứng ngoài danh sách mới và phải khớp C4_ITEMS sau khi đổi NAME canonical.
         29. Không render O2.
         30. Mọi item TYPE = Triệu chứng đã được scan âm tính với trigger của 6 hội chứng chuẩn trước khi PASS; nếu đau khớp gối khi vận động/lạo xạo xương, hoa mắt chóng mặt hiện tại rõ, ợ hơi/ợ chua/nóng rát thượng vị, đau vùng cổ/cột sống cổ, đau thắt lưng hoặc glucose máu/HbA1c tăng xuất hiện trong TYPE = Triệu chứng thì C4_CHECK = NEEDS_FIX.
-        31. Không có item TYPE = Cận lâm sàng rời trùng normalized text, cùng kết quả A14_STATE hoặc cùng nội dung cận lâm sàng đã nằm trong CẬN_LÂM_SÀNG của bất kỳ TYPE = Hội chứng nào.
-        32. Không có ITEM_CHECK = NEEDS_FIX; mọi ITEM_ERROR khác NONE phải kéo C4_CHECK = NEEDS_FIX.
+        31. Mọi item TYPE = Cận lâm sàng đã được scan âm tính với trigger của 6 hội chứng chuẩn trước khi PASS; nếu MRI cột sống cổ liên quan, X-quang/siêu âm/MRI khớp hoặc CRP liên quan, MRI/X-quang cột sống thắt lưng liên quan, glucose máu/đường máu tại nhà/HbA1c tăng hoặc cao rõ xuất hiện trong TYPE = Cận lâm sàng rời mà đủ trigger hội chứng chuẩn thì C4_CHECK = NEEDS_FIX và C4_ERROR = ERR-C4-SYNDROME-DOWNGRADED-TO-ISOLATED-CLS.
+        32. Không có item TYPE = Cận lâm sàng rời trùng normalized text, cùng kết quả A14_STATE hoặc cùng nội dung cận lâm sàng đã nằm trong CẬN_LÂM_SÀNG của bất kỳ TYPE = Hội chứng nào.
+        33. Không có ITEM_CHECK = NEEDS_FIX; mọi ITEM_ERROR khác NONE phải kéo C4_CHECK = NEEDS_FIX.
     Nếu sai bất kỳ điểm nào trên:
         C4_CHECK = NEEDS_FIX, không được PASS.
         C4_ERROR phải ghi rõ lỗi thuộc nhóm:
@@ -3344,11 +3356,12 @@ C4.19. C4_CHECK mới
             - Dictionary hội chứng cũ / ERR-C4-LEGACY-SYNDROME-DICTIONARY.
             - NAME hội chứng bị sửa/tùy biến / ERR-C4-SYNDROME-NAME-MODIFIED.
             - Hạ hội chứng chuẩn xuống triệu chứng / ERR-C4-SYNDROME-DOWNGRADED-TO-SYMPTOM.
+            - Hạ hội chứng chuẩn xuống cận lâm sàng rời / ERR-C4-SYNDROME-DOWNGRADED-TO-ISOLATED-CLS.
             - Cận lâm sàng rời trùng cận lâm sàng đã ghép hội chứng / ERR-C4-DUPLICATE-CLS-ALREADY-IN-SYNDROME.
 
 C4.20. NAME/TYPE canonical theo C4_SYNDROME_DICTIONARY
-    C4 bắt buộc chạy bước canonical syndrome trigger scan theo C4_SYNDROME_DICTIONARY trước khi quyết định TYPE = Triệu chứng.
-    Không được tạo TYPE = Triệu chứng trước rồi bỏ qua dictionary scan.
+    C4 bắt buộc chạy bước canonical syndrome trigger scan theo C4_SYNDROME_DICTIONARY trước khi quyết định TYPE = Triệu chứng hoặc TYPE = Cận lâm sàng rời.
+    Không được tạo TYPE = Triệu chứng hoặc TYPE = Cận lâm sàng rời trước rồi bỏ qua dictionary scan.
     Nếu dữ kiện match trigger hội chứng chuẩn, NAME phải là canonical exact-match trong 6 hội chứng, không phụ thuộc dữ kiện có đầy đủ nhiều dấu hiệu hay chỉ có trigger đủ theo dictionary mới.
     Nếu dữ kiện đủ tiêu chí một trong 6 hội chứng chuẩn trong C4_SYNDROME_DICTIONARY thì bắt buộc TYPE = Hội chứng và NAME = đúng tên canonical exact-match.
     Nếu có triệu chứng thật nhưng không đủ điều kiện vào bất kỳ hội chứng nào trong 6 hội chứng chuẩn thì TYPE = Triệu chứng.
@@ -3360,14 +3373,17 @@ C4.20. NAME/TYPE canonical theo C4_SYNDROME_DICTIONARY
     Bệnh nền đái tháo đường hoặc đa dây thần kinh do đái tháo đường không được đưa vào C4 nếu chỉ là tiền sử/chẩn đoán nền, không có triệu chứng hiện tại hoặc cận lâm sàng liên quan; nếu C4_FOR_O2 đưa bệnh nền từ A12/tiền sử vào không có biểu hiện hiện tại thì C4_CHECK = NEEDS_FIX.
     Với đau vùng cổ/cột sống cổ/vận động cổ đau: chọn TYPE = Hội chứng, NAME = Hội chứng cổ vai cánh tay.
     Với đau thắt lưng/đau vùng cột sống thắt lưng/vận động cột sống thắt lưng đau: chọn TYPE = Hội chứng, NAME = Hội chứng thắt lưng hông.
-    Với glucose máu tăng, HbA1c tăng hoặc triệu chứng tăng glucose máu: chọn TYPE = Hội chứng, NAME = Hội chứng tăng glucose máu; không dùng NAME = Hội chứng tăng đường huyết.
+    Với glucose máu tăng, đường máu tăng, HbA1c tăng, tăng glucose máu, tăng đường máu, đường máu tại nhà dao động cao rõ, glucose máu numeric cao rõ, HbA1c numeric cao rõ hoặc triệu chứng tăng glucose máu: chọn TYPE = Hội chứng, NAME = Hội chứng tăng glucose máu; không dùng NAME = Hội chứng tăng đường huyết và không hạ thành TYPE = Cận lâm sàng rời.
     Mapping runtime bắt buộc:
         1. Đau khớp gối hai bên / đau khớp gối khi vận động / lạo xạo xương (+) → Hội chứng viêm khớp.
         2. Hoa mắt chóng mặt hiện tại rõ → Hội chứng tiền đình.
         3. Ợ hơi / ợ chua / nóng rát thượng vị / ấn tức thượng vị / Mendel (+) → Hội chứng viêm dạ dày tá tràng.
         4. Đau vùng cổ vai cánh tay / vận động cột sống cổ giảm / co cứng cơ cạnh sống cổ / MRI cột sống cổ liên quan → Hội chứng cổ vai cánh tay.
         5. Đau cột sống thắt lưng / đau thắt lưng / đau lan mông chân → Hội chứng thắt lưng hông.
-        6. Glucose máu tăng / HbA1c tăng / triệu chứng tăng glucose → Hội chứng tăng glucose máu.
+        6. Đường máu tại nhà dao động 15-20 mmol/L → Hội chứng tăng glucose máu nếu là dữ kiện hiện tại hợp lệ/cao rõ.
+        7. Glucose máu 18,4 mmol/L → Hội chứng tăng glucose máu nếu là dữ kiện hiện tại hợp lệ/cao rõ.
+        8. HbA1c 9,7% → Hội chứng tăng glucose máu nếu là dữ kiện hiện tại hợp lệ/cao rõ.
+        9. Đường máu tăng / glucose máu tăng / HbA1c tăng / tăng đường máu / tăng glucose máu / triệu chứng tăng glucose → Hội chứng tăng glucose máu.
     Nếu runtime output vi phạm các mapping này nhưng vẫn render format đúng, C4_CHECK vẫn phải NEEDS_FIX.
     Không có nhóm vá riêng ngoài dictionary; tiêu chí từng hội chứng đã nằm trong C4_SYNDROME_DICTIONARY.
 
@@ -3591,6 +3607,43 @@ C4.24. Ví dụ FAIL và kết thúc module
             - C4_CHECK không được PASS chỉ vì render format đúng hoặc C4_FOR_O2 khớp C4_ITEMS.
             - C4_CHECK = NEEDS_FIX.
             - C4_ERROR phải ghi ERR-C4-SYNDROME-DOWNGRADED-TO-SYMPTOM và/hoặc ERR-C4-DUPLICATE-CLS-ALREADY-IN-SYNDROME theo lỗi thật.
+
+    C4.24.19. FAIL vì hạ đường máu/glucose/HbA1c tăng thành Cận lâm sàng rời
+        C4_ITEM:
+            TYPE = Cận lâm sàng
+            NAME = Đường máu tăng
+            LÂM_SÀNG: NONE
+            CẬN_LÂM_SÀNG: Đường máu tại nhà dao động 15-20 mmol/L; glucose máu 18,4 mmol/L; HbA1c 9,7%.
+            ITEM_CHECK = PASS
+            ITEM_ERROR = NONE
+        C4_CHECK = PASS
+        C4_ERROR = NONE
+        Lỗi:
+            - Dữ kiện này đủ trigger Hội chứng tăng glucose máu.
+            - Đúng ra phải TYPE = Hội chứng, NAME = Hội chứng tăng glucose máu.
+            - ITEM_CHECK không được PASS.
+            - C4_CHECK không được PASS.
+            - C4_ERROR phải có ERR-C4-SYNDROME-DOWNGRADED-TO-ISOLATED-CLS.
+
+    C4.24.20. PASS vì glucose/HbA1c tăng được gộp đúng vào Hội chứng tăng glucose máu
+        C4_ITEM:
+            TYPE = Hội chứng
+            NAME = Hội chứng tăng glucose máu
+            LÂM_SÀNG: NONE
+            CẬN_LÂM_SÀNG: Đường máu tại nhà dao động 15-20 mmol/L; glucose máu 18,4 mmol/L; HbA1c 9,7%.
+            ITEM_CHECK = PASS
+            ITEM_ERROR = NONE
+        C4_FOR_O2:
+            - Hội chứng tăng glucose máu:
+              + Đường máu tại nhà dao động 15-20 mmol/L; glucose máu 18,4 mmol/L; HbA1c 9,7%.
+
+    C4.24.21. FAIL vì false PASS khi C4_FOR_O2 render dòng cận lâm sàng đúng format nhưng classification sai
+        C4_FOR_O2 render dòng “- Đường máu tại nhà dao động 15-20 mmol/L; glucose máu 18,4 mmol/L; HbA1c 9,7%.” ở cuối đúng format TYPE = Cận lâm sàng.
+        Lỗi:
+            - Classification vẫn sai vì glucose/HbA1c tăng hoặc cao rõ phải là TYPE = Hội chứng, NAME = Hội chứng tăng glucose máu.
+            - C4_CHECK không được PASS chỉ vì render format đúng.
+            - C4_CHECK = NEEDS_FIX.
+            - C4_ERROR = ERR-C4-SYNDROME-DOWNGRADED-TO-ISOLATED-CLS.
 
     C4 hoàn tất khi:
         1. Đã tạo mới, cập nhật hoặc dùng lại C4_STATE.
