@@ -683,7 +683,7 @@ O2.8. Chuẩn cận lâm sàng trong O2
 
 O2.9. Câu mở đầu và quy tắc chữ hoa/thường
     Câu mở đầu phải là một câu văn liền mạch theo hướng:
-        Bệnh nhân [nam/nữ], [tuổi] tuổi, [tiền sử nếu có], vào viện vì [lý do vào viện]. Qua thăm khám và cận lâm sàng phát hiện các hội chứng, triệu chứng và cận lâm sàng rời sau:
+        Bệnh nhân [nam/nữ], [tuổi] tuổi, [tiền sử nếu có], vào viện vì [lý do vào viện]. Qua thăm khám phát hiện các hội chứng và triệu chứng sau.
     Nếu có tiền sử, chèn dưới dạng “tiền sử [A2_FINAL]”. Nếu không có tiền sử, bỏ cụm tiền sử và không để thừa dấu phẩy.
     Có thể giữ “vào ngày thứ [số ngày bệnh] của bệnh” chỉ khi A3 có dữ kiện đã chuẩn hóa rõ, hệ hiện hành vẫn muốn giữ và O2 không tự tạo số ngày bệnh.
     Nếu A3 không có số ngày bệnh rõ, O2 không tự tạo và không ép mẫu gây bịa dữ liệu.
@@ -752,7 +752,7 @@ O2.13. Chuẩn đầu ra O2
     Format output thật:
         ```text
         TÓM TẮT BỆNH ÁN
-        Bệnh nhân [nam/nữ], [tuổi] tuổi, [tiền sử nếu có], vào viện vì [lý do vào viện]. Qua thăm khám và cận lâm sàng phát hiện các hội chứng, triệu chứng và cận lâm sàng rời sau:
+        Bệnh nhân [nam/nữ], [tuổi] tuổi, [tiền sử nếu có], vào viện vì [lý do vào viện]. Qua thăm khám phát hiện các hội chứng và triệu chứng sau.
         [COPY NGUYÊN VĂN C4_STATE.C4_FOR_O2]
         ```
     Cấm trong output nếu không nằm nguyên văn trong C4_FOR_O2:
@@ -781,7 +781,7 @@ O2.14. Ví dụ chuẩn hóa
     Mẫu này chỉ dùng để định hướng format, không sao chép vào ca bệnh thật:
         ```text
         TÓM TẮT BỆNH ÁN
-        Bệnh nhân nam, 64 tuổi, tiền sử đái tháo đường nhiều năm, vào viện vì đau khớp vai trái, hoa mắt chóng mặt. Qua thăm khám và cận lâm sàng phát hiện các hội chứng, triệu chứng và cận lâm sàng rời sau:
+        Bệnh nhân nam, 64 tuổi, tiền sử đái tháo đường nhiều năm, vào viện vì đau khớp vai trái, hoa mắt chóng mặt. Qua thăm khám phát hiện các hội chứng và triệu chứng sau.
         - Hội chứng viêm khớp:
           + Khớp vai trái sưng đau, vận động đau tăng, ấn khe khớp đau.
           + MRI khớp vai: tụ dịch, rách bán phần dây chằng/gân cơ dưới vai.
@@ -798,6 +798,8 @@ O2.15. O2_RENDER_CHECK / hậu kiểm nội bộ
         1. O2_OUTPUT nằm trong một code block text duy nhất.
         2. Tiêu đề đúng là “TÓM TẮT BỆNH ÁN”.
         3. Có đúng một câu mở đầu theo mapping O2.
+        3a. Câu mở đầu bắt buộc kết thúc bằng đúng literal “Qua thăm khám phát hiện các hội chứng và triệu chứng sau.”
+        3b. O2_RENDER_CHECK = NEEDS_FIX và O2_ERROR = ERR-O2-OPENING-CLOSING-PHRASE-NOT-LITERAL nếu câu mở đầu dùng cụm cũ “Qua thăm khám và cận lâm sàng phát hiện...”, dùng “các hội chứng, triệu chứng và cận lâm sàng rời sau:”, thiếu literal mới, đổi dấu chấm thành dấu hai chấm hoặc thêm/bớt/chỉnh sửa literal mới.
         4. Phần thân sau câu mở đầu phải bằng nguyên văn C4_STATE.C4_FOR_O2.
         5. Không có dòng nào sau câu mở đầu nằm ngoài C4_FOR_O2.
         6. Không có dòng “Khám ghi nhận”.
@@ -849,7 +851,7 @@ O2.16. Checklist trước khi chốt O2
         28. Không có dòng “Hiện tại còn...”.
         29. Không có mục “Tình trạng hiện tại”.
         30. Không có dòng hiện tại cuối cùng.
-        31. Câu mở đầu đúng chuẩn mới và có cụm “Qua thăm khám và cận lâm sàng phát hiện các hội chứng, triệu chứng và cận lâm sàng rời sau:”.
+        31. Câu mở đầu đúng chuẩn mới và có cụm “Qua thăm khám phát hiện các hội chứng và triệu chứng sau.”.
         32. Tiêu đề là “TÓM TẮT BỆNH ÁN”.
         33. Output nằm trong một khung code text duy nhất.
         34. Tiêu đề “TÓM TẮT BỆNH ÁN” nằm trong code block.
