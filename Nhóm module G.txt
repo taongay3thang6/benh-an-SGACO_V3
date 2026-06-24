@@ -298,6 +298,11 @@ G_CORE.8. Schema G_STATE canonical
             O_RENDER_ORDER = ...
             G_CHECK = PASS / NEEDS_FIX
             G_ERROR = NONE / ...
+    G_CORE.8.1.x. Format khi in G_STATE
+        Khi in G_STATE sau STEP 1 — G, toàn bộ nội dung G_STATE canonical ở G_CORE.8.1 bắt buộc nằm trong đúng một fenced code block duy nhất kiểu ```text.
+        Mọi giải thích hoặc ghi chú nếu có phải nằm ngoài code block và không được chen vào bên trong G_STATE.
+        Không render bất kỳ phần nào của G_STATE ngoài code block.
+        Không chia cùng một G_STATE thành nhiều code block.
     G_CORE.8.2. G_STATE không được chứa
         G_STATE không được chứa:
             1. Field chọn một phần nhóm A.
