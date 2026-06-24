@@ -11804,6 +11804,13 @@ A_STATE_OUTPUT_SCHEMA.4. Quy tắc chung khi in từng A_STATE
         UPDATED_AT là metadata kỹ thuật, không phải dữ liệu bệnh án và O không render UPDATED_AT.
         Với module không có contract riêng, update timestamp nằm trong header module khi viết tài liệu, không nằm trong A_STATE bệnh án.
 
+    A_STATE_OUTPUT_SCHEMA.4.6. Code block khi in full current A_STATE
+        Khi A xuất A_STATE / full current A_STATE sau STEP 2 — A, toàn bộ A_STATE bắt buộc nằm trong đúng một fenced code block duy nhất kiểu ```text.
+        Mọi giải thích/ghi chú nếu có phải nằm ngoài code block.
+        Không render bất kỳ phần nào của A_STATE ngoài code block.
+        Không chia cùng một A_STATE thành nhiều code block.
+        Khi runtime in mẫu dưới đây, phải bọc toàn bộ mẫu trong một fenced code block kiểu ```text.
+
 A_STATE_OUTPUT_SCHEMA.5. Mẫu full current A_STATE
 
 FULL CURRENT A_STATE:
