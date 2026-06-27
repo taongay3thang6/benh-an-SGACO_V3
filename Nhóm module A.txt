@@ -7245,961 +7245,208 @@ A11_END
 <<< END A11
 
 A12 — CHẨN ĐOÁN
-Version: BA S-G-A-C-O v3
-Update 20:00 31/05/2026 GMT+7
-
->>> READ-LOCK: A12
-- Bắt buộc đọc tuần tự toàn bộ A12 từ A12.1 đến A12.20.
-- Không được bỏ qua mục nào.
-- Chỉ tạo A12_STATE.
-- Không tạo state của A khác.
-- Không chạy C.
-- Không render O.
-- Không tự dừng STEP A.
-- Không chuyển sớm sang A_GATE.
-- Sau khi hoàn tất A12_STATE, chuyển sang A13 theo A_RUN_ORDER.
-<<< END READ-LOCK: A12
-
-A12.1. Nhiệm vụ của A12
-    A12.1.1. Vai trò chính của A12
-        A12 là module chuẩn hóa và chốt chẩn đoán hiện tại.
-        A12 tạo A12_STATE để đưa vào full current A_STATE của ROUND hiện tại.
-        A12_STATE là nguồn chính thức cho C/O khi cần dữ liệu chẩn đoán hiện tại.
-        A12_FINAL là chẩn đoán dùng để render trong bệnh án.
-        A12_DIAGNOSIS_LIST là danh sách chẩn đoán đã chuẩn hóa, không chứa mã ICD.
-        O chỉ đọc A12_STATE khi render chẩn đoán và không tự viết lại chẩn đoán.
-        A_GATE chỉ kiểm kỹ thuật A12_STATE có đủ UPDATED_AT, A12_FINAL và A12_DIAGNOSIS_LIST; chất lượng nội dung A12_FINAL và A12_DIAGNOSIS_LIST phải được khóa trong A12.
-        Nếu chẩn đoán sai, thiếu hoặc mâu thuẫn, phải chạy lại A12 và cập nhật full A12_STATE trong full current A_STATE ở STEP A.
-
-    A12.1.2. Nội dung A12 tạo ra
-        A12 tạo:
-            1. UPDATED_AT.
-            2. A12_FINAL.
-            3. A12_DIAGNOSIS_LIST.
-            4. A12_CHECK.
-            5. A12_ERROR nếu A12_CHECK = NEEDS_FIX.
-        A12 giữ metadata kỹ thuật hệ thống đang dùng:
-            1. STATE_VERSION.
-            2. A12_REV.
-            3. CREATE / UPDATE / REUSE như trạng thái xử lý nội bộ.
-            4. Full-state semantics.
-        UPDATED_AT là metadata quản lý thời điểm cập nhật A12_STATE, không phải dữ liệu bệnh án và không render trong O.
-        UPDATED_AT khác A12_REV; A12_REV tăng hoặc giữ theo thay đổi nội dung thật.
-
-    A12.1.3. Nguyên tắc trách nhiệm
-        A12 chỉ chịu trách nhiệm chuẩn hóa và chốt chẩn đoán hiện tại.
-        A12 không viết lý do vào viện.
-        A12 không viết tiền sử.
-        A12 không viết bệnh sử.
-        A12 không viết khám lâm sàng.
-        A12 không tạo cận lâm sàng.
-        A12 không tạo hướng điều trị thay A13.
-        A12 không viết bệnh trình hoặc tình trạng ra viện thay C7.
-        A12 không kê thuốc hoặc đơn thuốc thay A15.
-        A12 không render O.
-        A12 không chạy C.
-        A12 không làm chẩn đoán phân biệt thay C5.
-
-A12.2. Nguồn được đọc
-    A12.2.1. Nguồn được đọc
-        A12 được đọc:
-            1. User input của ROUND hiện tại.
-            2. G_STATE của ROUND hiện tại, chỉ để lấy metadata kỹ thuật ROUND_ID, STATE_VERSION, RUN_MODE nếu hệ thống đang dùng.
-            3. A12_STATE hiện hành mới nhất nếu đã có.
-            4. File/module A12.
-            5. A1_STATE nếu cần đối chiếu lý do vào viện với chẩn đoán.
-            6. A2_STATE nếu cần phân biệt tiền sử với chẩn đoán hiện tại.
-            7. A3_STATE nếu cần đối chiếu bệnh sử / triệu chứng hiện tại.
-            8. A4_STATE nếu cần đối chiếu toàn thân.
-            9. A5_STATE nếu cần đối chiếu tuần hoàn.
-            10. A6_STATE nếu cần đối chiếu hô hấp.
-            11. A7_STATE nếu cần đối chiếu tiêu hóa.
-            12. A8_STATE nếu cần đối chiếu thận - tiết niệu.
-            13. A9_STATE nếu cần đối chiếu thần kinh.
-            14. A10_STATE nếu cần đối chiếu cơ xương khớp.
-            15. A11_STATE nếu cần đối chiếu cơ quan khác.
-            16. A14_STATE nếu có dữ liệu cận lâm sàng thật đã được user cung cấp hoặc đã có trong A14_STATE.
-        A1-A11_STATE là dependency hợp lệ vì đã có trước A12 trong A_RUN_ORDER. A14_STATE hiện hành từ ROUND trước chỉ được dùng nếu đã tồn tại trong CURRENT_STATE; A12 không chờ A14 của ROUND hiện tại vì A14 chạy sau A13 theo order đồng bộ A1-A15.
-        Khi đọc dependency, A12 chỉ dùng để chuẩn hóa hoặc chốt chẩn đoán trong phạm vi A12.
-        A12 không ghi thay nội dung của A3-A11_STATE hoặc A14_STATE vào A12_STATE như dữ kiện mới.
-        A12 không dùng dependency để tự tạo dữ kiện bệnh sử, khám lâm sàng hoặc cận lâm sàng mới.
-
-    A12.2.2. Dữ liệu user input có thể dùng cho A12
-        A12 được lấy dữ liệu từ user input nếu dữ liệu đó thuộc chẩn đoán hiện tại:
-            1. Chẩn đoán user cung cấp trực tiếp.
-            2. Danh sách chẩn đoán trong phần hành chính / bệnh án đầu vào.
-            3. Mã ICD kèm tên bệnh.
-            4. Mã ICD đơn độc nếu module chắc chắn tên bệnh tương ứng.
-            5. Chẩn đoán chính.
-            6. Chẩn đoán kèm.
-            7. Bệnh kèm hiện tại.
-            8. Biến chứng nếu user ghi rõ.
-            9. Chẩn đoán theo dõi.
-            10. Chẩn đoán nghi ngờ.
-            11. Chẩn đoán loại trừ.
-            12. Tên bệnh được user ghi trong phần “chẩn đoán”.
-            13. Tên bệnh được user ghi là bệnh đang điều trị hiện tại.
-            14. Tên bệnh được user yêu cầu thêm vào chẩn đoán.
-
-    A12.2.3. Nguồn không dùng
-        A12 không đọc A13 hoặc A15 của ROUND hiện tại để viết ngược A12.
-        A12 không đọc A13_STATE hoặc A15_STATE của ROUND hiện tại vì các module này chạy sau A12.
-        A12 không dùng A13_STATE hoặc A15_STATE cũ từ ROUND trước để tạo A12 trong ROUND hiện tại.
-        Nếu user input trực tiếp có hướng xử trí, thuốc hoặc kế hoạch, A12 chỉ dùng để hiểu ngữ cảnh nếu dữ kiện lâm sàng độc lập đã đủ; không dùng thuốc hoặc hướng điều trị để suy ra chẩn đoán.
-        A12 không đọc C_STATE vì C chạy sau A.
-        A12 không đọc O_OUTPUT.
-        A12 không đọc output đã render.
-        A12 không dùng output hoặc rendered output để quyết định thiếu hay chưa thiếu chẩn đoán.
-        A12 không dùng trí nhớ ẩn.
-        A12 không dùng dữ liệu ngoài state hợp lệ.
-        A12 không dùng cận lâm sàng cần làm như kết quả đã có.
-        A12 không dùng kế hoạch xét nghiệm để xác định chẩn đoán.
-        A12 không dùng chẩn đoán phân biệt của C5 để thay thế chẩn đoán hiện tại.
-
-A12.3. Dependency nội bộ và vai trò trong hệ STATE
-    A12.3.1. Dependency của A12
-        A12 có thể đọc A1_STATE, A2_STATE, A3_STATE, A4_STATE, A5_STATE, A6_STATE, A7_STATE, A8_STATE, A9_STATE, A10_STATE và A11_STATE của ROUND hiện tại. A14_STATE chỉ được đọc nếu là CURRENT_STATE hợp lệ đã có từ ROUND trước hoặc dữ kiện A14 user cung cấp trực tiếp trong ROUND hiện tại đã nằm trong user input; A12 không phụ thuộc A14_STATE được tạo sau A13 trong cùng ROUND.
-        A1_STATE được dùng để đối chiếu chẩn đoán với lý do vào viện.
-        A2_STATE được dùng để phân biệt tiền sử/bệnh nền với chẩn đoán hiện tại.
-        A3_STATE được dùng để đối chiếu bệnh sử và triệu chứng hiện tại.
-        A4-A11_STATE được dùng để đối chiếu khám lâm sàng theo hệ cơ quan.
-        A14_STATE chỉ được dùng nếu có kết quả cận lâm sàng thật.
-
-    A12.3.2. Giới hạn dependency
-        Nếu user đã cung cấp chẩn đoán rõ, dependency không được dùng để tự đổi bản chất chẩn đoán user cung cấp.
-        Dependency không được dùng để tự bỏ chẩn đoán user cung cấp.
-        Dependency không được dùng để tự thêm chẩn đoán mới vào danh sách user đã cung cấp.
-        Dependency không được dùng để biến tiền sử thành chẩn đoán hiện tại nếu không có căn cứ bệnh cảnh hiện tại.
-        Dependency không được dùng để tạo chẩn đoán vượt quá dữ kiện.
-        Dependency không được dùng để biến triệu chứng đơn độc thành bệnh xác định nếu không đủ căn cứ.
-        A12 không đọc C_STATE.
-        A12 không đọc O_OUTPUT.
-
-    A12.3.3. A12_STATE cho C/O
-        A12_STATE phải có UPDATED_AT, A12_FINAL và A12_DIAGNOSIS_LIST.
-        A12_FINAL là chẩn đoán dùng để render trong bệnh án.
-        A12_DIAGNOSIS_LIST là danh sách chẩn đoán đã chuẩn hóa, không chứa mã ICD.
-        O không tự viết lại chẩn đoán, không thêm ICD và không đổi nội dung A12_FINAL.
-        A_GATE chỉ kiểm kỹ thuật đủ trường; nội dung đúng/sai của chẩn đoán do A12 tự kiểm bằng A12_CHECK.
-
-A12.4. Quy tắc CREATE / UPDATE / REUSE và A12_REV
-    A12.4.1. Trạng thái xử lý nội bộ
-        CREATE / UPDATE / REUSE là trạng thái xử lý nội bộ của A12 đối với A12_STATE.
-        RUN_MODE nếu còn trong G_STATE chỉ là metadata kỹ thuật để hiểu bối cảnh hệ thống, không phải điều kiện chính để từ chối tự tạo chẩn đoán khi user không cung cấp chẩn đoán.
-        A12 không tự xác định RUN_MODE và không thay đổi A_RUN_ORDER.
-
-    A12.4.2. CREATE A12_STATE
-        CREATE khi chưa có A12_STATE hiện hành.
-        A12 tạo full A12_STATE mới từ user input và dependency hợp lệ A1-A11 nếu cần; A14 chỉ là nguồn tham chiếu hợp lệ khi đã có CURRENT_STATE từ ROUND trước hoặc dữ kiện được user cung cấp trực tiếp trong ROUND hiện tại.
-        A12 phải xác định:
-            1. STATE_VERSION.
-            2. UPDATED_AT = HH:MM dd/mm/yyyy.
-            3. A12_REV = 1.
-            4. A12_FINAL.
-            5. A12_DIAGNOSIS_LIST.
-            6. A12_CHECK.
-            7. A12_ERROR.
-
-    A12.4.3. UPDATE A12_STATE
-        UPDATE khi user input của ROUND hiện tại hoặc dependency hợp lệ A1-A11 và A14 hiện hành nếu đã có hợp lệ làm nội dung thật của A12_FINAL hoặc A12_DIAGNOSIS_LIST thay đổi.
-        Dữ liệu có thể ảnh hưởng A12 gồm:
-            1. User thêm, sửa hoặc xóa chẩn đoán.
-            2. User thêm, sửa hoặc xóa mã ICD trong input; đầu ra A12 vẫn phải bỏ ICD.
-            3. User yêu cầu chuyển chẩn đoán hiện tại thành tiền sử hoặc xác nhận một tiền sử đang là bệnh hiện tại.
-            4. User yêu cầu thêm/bỏ “theo dõi”, “nghi”, “loại trừ”.
-            5. Khi user không cung cấp chẩn đoán, dependency hợp lệ A1-A11 và A14 hiện hành nếu đã có hợp lệ đủ căn cứ làm thay đổi chẩn đoán tự tạo.
-        Khi UPDATE:
-            - A12 đọc A12_STATE hiện hành mới nhất nếu có.
-            - A12 thay phần bị ảnh hưởng bằng dữ liệu mới.
-            - A12 giữ phần không bị ảnh hưởng bằng nội dung hiện hành mới nhất.
-            - UPDATED_AT cập nhật theo thời điểm UPDATE.
-            - A12_REV tăng 1 so với A12_REV hiện hành nếu nội dung thật thay đổi.
-            - A12_STATE sau cập nhật là full state và mang STATE_VERSION của ROUND hiện tại.
-            - A12_FINAL và A12_DIAGNOSIS_LIST phải đồng bộ nhau.
-
-    A12.4.4. REUSE A12_STATE
-        REUSE khi đã có A12_STATE hiện hành và input/dependency không ảnh hưởng A12 hoặc nội dung thật của A12 không thay đổi.
-        Nếu user input có liên quan nhưng sau chuẩn hóa nội dung thật không đổi, A12 REUSE full A12_STATE và giữ nguyên A12_REV.
-        Khi REUSE trong full current A_STATE, A12_STATE vẫn phải có UPDATED_AT hợp lệ theo state hiện hành hoặc theo thời điểm in lại state nếu hệ thống yêu cầu cập nhật metadata kỹ thuật.
-        Không được ghi “giữ nguyên như trước” thay cho nội dung thật.
-        Không được chỉ ghi “reuse A12” thay cho full A12_STATE.
-
-    A12.4.5. Quy tắc A12_REV
-        A12 chỉ quản lý revision của chính A12.
-        A12 không tự tạo toàn bộ A_MODULE_REV.
-        Nếu CREATE A12_STATE: A12_REV = 1.
-        Nếu UPDATE và nội dung thật của A12_FINAL hoặc A12_DIAGNOSIS_LIST thay đổi: A12_REV tăng 1 so với A12_REV hiện hành.
-        Nếu REUSE hoặc nội dung thật không đổi: giữ nguyên A12_REV hiện hành.
-        A12_REV không tăng hoặc giữ theo tên RUN_MODE.
-        A12_REV là metadata kỹ thuật để A_GATE và full current A_STATE tổng hợp vào A_MODULE_REV.
-        A12_STATE luôn là full state, không phải patch hoặc delta.
-
-A12.5. Quy tắc xử lý theo hai nhánh cốt lõi
-    A12.5.1. Nhánh user đã cung cấp chẩn đoán
-        Nếu user đã cung cấp chẩn đoán, A12 chỉ chuẩn hóa chẩn đoán đó theo mẫu.
-        A12 xóa mã ICD.
-        A12 sửa lỗi chính tả nhẹ, dấu câu và khoảng trắng nếu cần.
-        A12 giữ nguyên bản chất chẩn đoán user cung cấp.
-        A12 không tự thêm chẩn đoán.
-        A12 không tự bỏ chẩn đoán.
-        A12 không tự đổi chẩn đoán.
-        A12 không tự nâng mức độ chẩn đoán.
-        A12 không tự hạ mức độ chẩn đoán.
-        A12 không tự thêm hoặc bỏ “theo dõi”, “nghi”, “loại trừ”.
-        A12 không biến chẩn đoán hiện tại thành tiền sử nếu user không nói đó là bệnh cũ/bệnh nền.
-        A12 giữ thứ tự chẩn đoán user cung cấp nếu user không yêu cầu sắp xếp lại.
-        Nếu user dặn “giữ nguyên chẩn đoán”, A12 chỉ chuẩn hóa định dạng và xóa mã ICD, không đổi nội dung.
-
-    A12.5.2. Nhánh user không cung cấp chẩn đoán
-        Nếu user không cung cấp chẩn đoán, A12 tự tạo chẩn đoán phù hợp nhất có thể căn cứ vào user input, A1-A11_STATE và A14_STATE nếu có kết quả thật.
-        A12 không cần user yêu cầu riêng “AI chẩn đoán”.
-        A12 không cần mode riêng mới được tạo chẩn đoán.
-        RUN_MODE không phải điều kiện chính để từ chối tự tạo chẩn đoán khi user không cung cấp chẩn đoán.
-        Nếu dữ kiện chắc chắn đủ căn cứ: A12 ghi chẩn đoán xác định.
-        Nếu dữ kiện gợi ý hợp lý nhưng chưa đủ chắc chắn: A12 dùng “Theo dõi...” cho chẩn đoán cần theo dõi.
-        Nếu dữ kiện quá thiếu để tạo chẩn đoán hợp lý: A12_FINAL = Chưa đủ dữ kiện xác định chẩn đoán.
-        Nếu cần user bổ sung hoặc xác minh vì dữ kiện quá thiếu hoặc mâu thuẫn: A12_CHECK = NEEDS_FIX và A12_ERROR ghi rõ cần bổ sung/xác minh gì.
-        A12 không tạo chẩn đoán vượt quá dữ kiện.
-        A12 không tạo chẩn đoán nguy hiểm/nặng nếu không có căn cứ.
-        A12 không tạo chẩn đoán dựa trên cận lâm sàng chưa có.
-        A12 không tạo chẩn đoán chỉ vì thuốc hoặc hướng điều trị.
-        A12 không tạo danh sách chẩn đoán phân biệt.
-
-    A12.5.3. RUN_MODE và ca mẫu
-        RUN_MODE nếu còn tồn tại trong G_STATE chỉ giúp nhận diện bối cảnh kỹ thuật, không làm thay đổi hai nhánh cốt lõi của A12.
-        Nếu là ca mẫu, A12 vẫn tạo chẩn đoán mẫu phù hợp dữ kiện mẫu, không vượt quá dữ kiện mẫu và không tạo bệnh nặng/biến chứng nếu không có căn cứ.
-        Không dùng RUN_MODE để bỏ qua trách nhiệm tự tạo chẩn đoán khi user không cung cấp chẩn đoán nhưng A1-A11/input đủ căn cứ.
-        Không đọc A13-A15 hoặc output để viết ngược A12.
-
-A12.6. Phạm vi chẩn đoán hiện tại và boundary
-    A12.6.1. Thành phần thuộc A12
-        A12 xử lý:
-            1. Chẩn đoán hiện tại.
-            2. Chẩn đoán chính nếu user ghi rõ hoặc khi A12 tự tạo cần xác định vấn đề chính.
-            3. Chẩn đoán kèm nếu user ghi rõ hoặc khi A12 tự tạo có căn cứ rõ.
-            4. Bệnh kèm hiện tại.
-            5. Biến chứng nếu user ghi rõ hoặc dữ kiện đủ rõ khi A12 tự tạo.
-            6. Chẩn đoán theo dõi.
-            7. Chẩn đoán nghi ngờ nếu user ghi.
-            8. Chẩn đoán loại trừ nếu user ghi.
-            9. Mã ICD nếu user cung cấp, nhưng chỉ để xóa mã và giữ/chuẩn hóa tên bệnh.
-            10. Danh sách bệnh đang cần xử lý trong đợt hiện tại.
-
-    A12.6.2. Thành phần không thuộc A12
-        A12 không xử lý:
-            1. Lý do vào viện.
-            2. Tiền sử nếu không phải bệnh hiện tại.
-            3. Bệnh sử.
-            4. Triệu chứng cơ năng như output riêng.
-            5. Khám lâm sàng như output riêng.
-            6. Cận lâm sàng như output riêng.
-            7. Hướng cần làm.
-            8. Thuốc.
-            9. Điều trị.
-            10. Tiên lượng.
-            11. Dặn dò.
-            12. Biện luận chẩn đoán.
-            13. Chẩn đoán phân biệt / differential diagnosis list.
-            14. Vấn đề điều dưỡng.
-            15. Kế hoạch theo dõi.
-
-    A12.6.3. Phân ranh với A2
-        A2 là tiền sử.
-        A12 là chẩn đoán hiện tại.
-        Không biến tiền sử A2 thành chẩn đoán hiện tại nếu user không cung cấp hoặc bệnh cảnh hiện tại không đủ căn cứ.
-        Không biến chẩn đoán hiện tại A12 thành tiền sử A2 nếu user không nói đó là bệnh cũ/bệnh nền.
-        Nếu user ghi bệnh trong mục tiền sử, A2 xử lý bệnh đó là tiền sử; A12 chỉ đưa bệnh đó vào chẩn đoán hiện tại nếu user cũng đưa vào chẩn đoán hiện tại hoặc bệnh cảnh hiện tại rõ và logic tự tạo cho phép.
-        Nếu user ghi bệnh trong danh sách chẩn đoán, A12 xử lý bệnh đó là chẩn đoán hiện tại; A2 không tự lấy bệnh đó làm tiền sử nếu user không nói rõ là bệnh cũ.
-        Nếu một bệnh vừa là tiền sử vừa là chẩn đoán hiện tại, A2 ghi tiền sử nếu user cung cấp và A12 ghi chẩn đoán hiện tại nếu user cung cấp hoặc logic tự tạo cho phép.
-
-    A12.6.4. Phân ranh với A14
-        A14 là cận lâm sàng đã có.
-        A12 được đọc A14 để đối chiếu chẩn đoán nếu A14 có kết quả thật.
-        A12 không viết kết quả cận lâm sàng vào A12_FINAL.
-        A12 không biến xét nghiệm dự kiến thành kết quả đã có.
-        A12 không thay A14 ghi cận lâm sàng.
-
-    A12.6.5. Phân ranh với C5/O13
-        A12 là chẩn đoán hiện tại dùng cho A12_FINAL và A12_DIAGNOSIS_LIST.
-        C5 xử lý chẩn đoán phân biệt, differential diagnosis và phân tích nhiều khả năng nếu cần.
-        A12 không tạo danh sách chẩn đoán phân biệt.
-        A12 không phân tích loại trừ nhiều khả năng.
-        A12 không viết differential diagnosis/list.
-        A12 không tự tạo “Loại trừ...” như danh sách differential nếu user không ghi.
-        A12 có thể ghi một chẩn đoán hiện tại dạng “Theo dõi...” khi A12 tự tạo và chưa chắc chắn, nhưng không tạo danh sách differential.
-        Nếu cần danh sách loại trừ/phân biệt, C5 xử lý.
-
-A12.7. Nguyên tắc giữ nguyên chẩn đoán user cung cấp
-    A12.7.1. Giữ bản chất chẩn đoán
-        Nếu user đã cung cấp chẩn đoán, A12 phải giữ nguyên bản chất chẩn đoán.
-        A12 chỉ chuẩn hóa cách viết, dấu câu, khoảng trắng, tách dòng, lỗi chính tả nhẹ và loại bỏ mã ICD khỏi đầu ra.
-        “Giữ bản chất” nghĩa là:
-            1. Không đổi bệnh này thành bệnh khác.
-            2. Không đổi bệnh xác định thành bệnh nghi ngờ nếu user không yêu cầu.
-            3. Không đổi bệnh nghi ngờ thành bệnh xác định nếu user không yêu cầu.
-            4. Không đổi vị trí bệnh nếu user đã ghi rõ.
-            5. Không đổi mức độ bệnh nếu user đã ghi rõ.
-            6. Không bỏ biến chứng nếu user đã ghi rõ.
-            7. Không thêm biến chứng nếu user không ghi hoặc dữ kiện không đủ.
-            8. Không thêm giai đoạn, mức độ, đợt cấp nếu user không ghi hoặc không đủ căn cứ.
-
-    A12.7.2. Không tự thay đổi danh sách chẩn đoán user
-        Không tự thêm chẩn đoán mới nếu user đã cung cấp chẩn đoán.
-        Không tự bỏ chẩn đoán user đã cung cấp.
-        Không tự đổi chẩn đoán user đã cung cấp sang chẩn đoán khác.
-        Không tự nâng mức độ chẩn đoán.
-        Không tự hạ mức độ chẩn đoán.
-        Không tự chuyển bệnh cấp thành bệnh mạn.
-        Không tự chuyển bệnh mạn thành đợt cấp nếu user không ghi và dữ kiện không đủ.
-        Không tự chuyển “Theo dõi” thành xác định.
-        Không tự chuyển “Nghi” thành xác định.
-        Không tự sắp xếp lại thứ tự chẩn đoán user cung cấp nếu user không yêu cầu.
-        Không tự đặt chính/kèm nếu user không yêu cầu.
-
-    A12.7.3. Giữ trạng thái không chắc chắn
-        Nếu user ghi “Theo dõi...”, A12 phải giữ “Theo dõi...”.
-        Nếu user ghi “Nghi...”, A12 phải giữ “Nghi...”.
-        Nếu user ghi “Nghi ngờ...”, A12 phải giữ trạng thái nghi ngờ.
-        Nếu user ghi “Loại trừ...”, A12 phải giữ “Loại trừ...”.
-        Nếu user ghi “Chưa loại trừ...”, A12 phải giữ “Chưa loại trừ...”.
-        Không tự bỏ các từ này nếu user không yêu cầu.
-        Không tự thêm các từ này nếu user không ghi, trừ khi A12 đang tự tạo chẩn đoán và dữ kiện chưa đủ chắc chắn.
-        Khi A12 tự tạo nhưng chưa đủ chắc chắn, ưu tiên dùng “Theo dõi...”.
-        Không biến “Theo dõi thấp khớp cấp” thành “Thấp khớp cấp” nếu user chưa yêu cầu hoặc chưa đủ căn cứ.
-
-A12.8. Quy tắc xử lý mã ICD
-    A12.8.1. Nguyên tắc chung
-        A12 phải xóa toàn bộ mã ICD khỏi A12_FINAL.
-        A12 phải xóa toàn bộ mã ICD khỏi A12_DIAGNOSIS_LIST.
-        Không giữ mã ICD ở bất kỳ vị trí nào trong chẩn đoán render ra O.
-        Nếu user cung cấp mã ICD kèm tên bệnh:
-            - A12 xóa mã ICD khỏi A12_FINAL.
-            - A12 xóa mã ICD khỏi A12_DIAGNOSIS_LIST.
-            - A12 giữ tên bệnh đi kèm.
-        Nếu user chỉ cung cấp mã ICD:
-            - A12 chuẩn hóa thành tên bệnh nếu chắc chắn ánh xạ mã bệnh trong phạm vi thông thường.
-            - Nếu không chắc chắn, không tự đoán.
-            - A12_CHECK = NEEDS_FIX nếu cần xác minh.
-            - A12_ERROR ghi rõ cần bổ sung tên bệnh tương ứng với mã ICD hoặc xác nhận chẩn đoán.
-
-    A12.8.2. Không để mã ICD trong đầu ra
-        A12_FINAL không chứa mã ICD.
-        A12_DIAGNOSIS_LIST không chứa mã ICD.
-        Không giữ ký hiệu phụ của mã ICD trong chẩn đoán render.
-        Không giữ dấu gạch, dấu hai chấm, ngoặc mã ICD thừa sau khi bỏ mã.
-        Không viết:
-            - I10 - Tăng huyết áp.
-            - E11-Bệnh đái tháo đường không phụ thuộc insulin.
-            - K21-Bệnh trào ngược dạ dày - thực quản.
-        Mà phải viết:
-            - Tăng huyết áp.
-            - Bệnh đái tháo đường típ 2.
-            - Bệnh trào ngược dạ dày - thực quản.
-
-    A12.8.3. ICD viết liền hoặc nhiều ICD
-        Nếu mã ICD viết liền tên bệnh, A12 phải tách mã ra và bỏ mã.
-        Nếu tên bệnh sau mã ICD thiếu dấu cách hoặc lỗi chính tả nhẹ, A12 chuẩn hóa lại tên bệnh nhưng không đổi bản chất chẩn đoán.
-        Nếu user nhập nhiều chẩn đoán kèm mã ICD:
-            - Xóa từng mã ICD.
-            - Giữ từng tên bệnh.
-            - Chuẩn hóa dấu phân cách.
-            - Mỗi tên bệnh là một mục riêng trong A12_DIAGNOSIS_LIST.
-        Nếu một mã ICD đi kèm nhiều diễn giải, A12 giữ diễn giải bệnh user cung cấp nếu hợp lý và không tự chọn diễn giải khác khi user đã ghi rõ.
-
-    A12.8.4. Không mở rộng quá mức từ mã ICD
-        Không tự thêm bệnh khác ngoài ý nghĩa mã ICD hoặc tên bệnh user cung cấp.
-        Không tự thêm biến chứng nếu user không ghi và dữ kiện không đủ.
-        Không tự thêm mức độ nặng nếu user không ghi và dữ kiện không đủ.
-        Không tự thêm vị trí bệnh nếu mã ICD hoặc user input không đủ căn cứ.
-        Không tự thêm giai đoạn bệnh nếu user không ghi và dữ kiện không đủ.
-
-A12.9. Quy tắc phân biệt chẩn đoán hiện tại với tiền sử
-    A12.9.1. Khi user ghi là tiền sử
-        Nếu user ghi rõ “tiền sử”, “đã từng”, “đã điều trị”, “bệnh cũ”, “đã khỏi”, “sau mổ cũ”, A12 không tự đưa vào chẩn đoán hiện tại nếu không có căn cứ bệnh đang hoạt động.
-        Các dữ kiện này thuộc A2, không tự đưa vào A12 nếu user không đưa vào chẩn đoán hiện tại và bệnh cảnh hiện tại không đủ căn cứ.
-        Không đưa bệnh nền vào chẩn đoán kèm chỉ vì xuất hiện trong A2 nếu không có căn cứ.
-
-    A12.9.2. Khi user ghi trong danh sách chẩn đoán
-        Nếu user ghi bệnh trong danh sách chẩn đoán hiện tại, A12 xử lý là chẩn đoán hiện tại.
-        Nếu user ghi bệnh trong mục “chẩn đoán kèm”, A12 xử lý là chẩn đoán kèm hiện tại.
-        Nếu user ghi bệnh nền đang điều trị trong đợt này như chẩn đoán kèm, A12 giữ trong chẩn đoán kèm.
-        Nếu user ghi rõ “đợt cấp”, A12 giữ “đợt cấp”.
-        A2 không tự lấy bệnh đó làm tiền sử nếu user không nói rõ là bệnh cũ.
-
-    A12.9.3. Khi user không cung cấp chẩn đoán nhưng có dữ kiện bệnh hiện tại
-        Nếu bệnh trong A2 cũng phù hợp bệnh cảnh hiện tại rõ ràng, A12 có thể đưa vào chẩn đoán hiện tại theo logic tự tạo.
-        Nếu bệnh nền ảnh hưởng trực tiếp đợt khám hiện tại và dữ kiện đủ căn cứ, A12 có thể đưa vào chẩn đoán kèm.
-        Nếu không rõ là tiền sử hay bệnh hiện tại và dữ kiện không đủ, A12 không tự chuyển thành chẩn đoán hiện tại; A12_FINAL dùng “Chưa đủ dữ kiện xác định chẩn đoán” hoặc A12_ERROR yêu cầu xác minh khi cần.
-
-A12.10. Quy tắc tự tạo chẩn đoán khi user không cung cấp chẩn đoán
-    A12.10.1. Điều kiện tự tạo chẩn đoán
-        A12 tự tạo chẩn đoán khi user không cung cấp chẩn đoán và user input/A1-A11/A14 có đủ căn cứ hợp lý để tạo chẩn đoán hiện tại.
-        A12 không cần user yêu cầu riêng “AI chẩn đoán”.
-        A12 không cần mode riêng mới được tạo chẩn đoán.
-        A12 dựa trên:
-            1. User input của ROUND hiện tại.
-            2. A1_REASON.
-            3. A2_FINAL để phân biệt tiền sử với bệnh hiện tại.
-            4. A3_FINAL.
-            5. A4_STATE.
-            6. A5_STATE.
-            7. A6_STATE.
-            8. A7_STATE.
-            9. A8_STATE.
-            10. A9_STATE.
-            11. A10_STATE.
-            12. A11_STATE.
-            13. A14_STATE nếu có kết quả cận lâm sàng thật.
-
-    A12.10.2. Mức chắc chắn khi tự tạo
-        Nếu dữ kiện rất phù hợp một bệnh và đủ căn cứ lâm sàng: A12 có thể ghi chẩn đoán xác định.
-        Nếu dữ kiện gợi ý nhưng thiếu tiêu chuẩn hoặc còn cần theo dõi thêm: A12 ghi “Theo dõi...”.
-        Nếu dữ kiện quá thiếu để tạo chẩn đoán hợp lý: A12_FINAL = Chưa đủ dữ kiện xác định chẩn đoán.
-        Nếu cần thêm thông tin để củng cố hoặc xác minh, A12_CHECK = NEEDS_FIX và A12_ERROR ghi rõ cần bổ sung/xác minh; phần hỏi thêm chi tiết thuộc C1 nếu hệ thống chạy C.
-        Không tự ép chẩn đoán xác định để làm bệnh án có vẻ đầy đủ.
-
-    A12.10.3. Giới hạn khi tự tạo chẩn đoán
-        Không tự chẩn đoán bệnh nặng nếu dữ kiện không đủ.
-        Không tạo chẩn đoán nguy hiểm/nặng nếu không có căn cứ.
-        Không dùng kết quả cận lâm sàng cần làm như kết quả đã có.
-        Không dùng thuốc hoặc hướng điều trị để suy ra chẩn đoán.
-        Không dùng C_STATE vì C chạy sau A.
-        Không dùng O_OUTPUT vì O là render sau.
-        Không biến một triệu chứng đơn độc thành chẩn đoán xác định nếu không đủ căn cứ.
-        Không tạo danh sách chẩn đoán quá dài.
-        Không đưa chẩn đoán phân biệt vào A12.
-        Không phân tích loại trừ nhiều khả năng trong A12.
-
-A12.11. Quy tắc chẩn đoán xác định / theo dõi / nghi ngờ / loại trừ
-    A12.11.1. Chẩn đoán xác định
-        Dùng khi user cung cấp rõ chẩn đoán xác định.
-        Dùng khi user không cung cấp chẩn đoán nhưng dữ kiện đủ rõ để A12 tự tạo chẩn đoán xác định.
-        Không dùng chẩn đoán xác định nếu dữ kiện chỉ gợi ý yếu.
-        Không tự xác định bệnh nặng nếu thiếu dữ kiện then chốt.
-
-    A12.11.2. Chẩn đoán theo dõi
-        Dùng khi user ghi “Theo dõi...”.
-        Dùng khi A12 tự tạo chẩn đoán và bệnh cảnh gợi ý hợp lý nhưng chưa đủ dữ kiện xác định.
-        Khi A12 tự tạo nhưng chưa đủ chắc chắn, ưu tiên dùng “Theo dõi...”.
-        Không dùng “Theo dõi...” để làm nhẹ chẩn đoán user đã xác định rõ nếu user không yêu cầu.
-        Ví dụ cách ghi:
-            - Theo dõi viêm ruột thừa cấp.
-            - Theo dõi viêm phổi.
-            - Theo dõi cơn đau quặn thận.
-
-    A12.11.3. Chẩn đoán nghi ngờ
-        Nếu user ghi “Nghi...” hoặc “Nghi ngờ...”, A12 giữ đúng tiền tố này.
-        A12 không tự thêm “Nghi...” nếu user không ghi, trừ khi hệ thống cần giữ đúng bản chất không chắc chắn từ user input.
-        Nếu có nhiều khả năng cần phân tích, chuyển phần đó sang C5/O13.
-
-    A12.11.4. Chẩn đoán loại trừ
-        Nếu user ghi “Loại trừ...” hoặc “Chưa loại trừ...”, A12 giữ đúng tiền tố này.
-        A12 không tự tạo “Loại trừ...” như danh sách differential nếu user không ghi.
-        Không tự đưa danh sách loại trừ dài vào A12.
-        Chẩn đoán phân biệt chi tiết thuộc C5/O13.
-
-A12.12. Quy tắc chẩn đoán chính / chẩn đoán kèm / biến chứng / thứ tự
-    A12.12.1. Chẩn đoán chính
-        Nếu user đã ghi chẩn đoán chính, A12 giữ theo user.
-        Nếu user không phân loại nhưng đã cung cấp danh sách chẩn đoán, A12 không tự đặt chính/kèm nếu user không yêu cầu.
-        Nếu user không cung cấp chẩn đoán và A12 tự tạo, A12 có thể xác định chẩn đoán chính là vấn đề chính hiện tại cần xử lý.
-        Không tự thay đổi chẩn đoán chính nếu user đã ghi rõ và không yêu cầu sửa.
-
-    A12.12.2. Chẩn đoán kèm
-        Nếu user ghi bệnh kèm rõ, A12 giữ.
-        Không tự đưa tiền sử ổn định vào chẩn đoán kèm nếu không có căn cứ bệnh đang hoạt động hoặc đang được quản lý trong đợt này.
-        Nếu user không cung cấp chẩn đoán và A12 tự tạo, A12 chỉ đưa bệnh kèm vào A12_DIAGNOSIS_LIST khi có căn cứ rõ.
-        Không đưa quá nhiều bệnh nền không liên quan vào A12.
-
-    A12.12.3. Biến chứng
-        Chỉ ghi biến chứng khi user cung cấp hoặc dữ kiện đủ rõ khi A12 tự tạo.
-        Không tự tạo biến chứng nếu không đủ căn cứ.
-        Không tự thêm suy hô hấp, suy thận, sốc, nhiễm khuẩn huyết, biến chứng tim mạch nếu dữ kiện không đủ.
-        Nếu user ghi biến chứng, A12 giữ đúng.
-        Nếu nghi biến chứng nhưng chưa đủ, dùng “Theo dõi...” cho chẩn đoán hiện tại nếu phù hợp hoặc để C5 xử lý phần differential nếu cần phân tích.
-
-    A12.12.4. Thứ tự trình bày
-        Nếu user cung cấp nhiều chẩn đoán, A12 giữ thứ tự user cung cấp nếu user không yêu cầu sắp xếp lại.
-        Không tự sắp xếp theo bệnh cảnh khi user đã cung cấp danh sách chẩn đoán.
-        Không tự đặt chính/kèm nếu user không yêu cầu.
-        Chỉ tự xác định thứ tự/chẩn đoán chính-kèm khi:
-            1. A12 đang tự tạo chẩn đoán vì user không cung cấp chẩn đoán; hoặc
-            2. User yêu cầu sắp xếp/chỉ định chẩn đoán chính-kèm.
-        Không đảo thứ tự làm sai ý định user.
-
-A12.13. Quy tắc đồng bộ với A1-A11 và A14
-    A12.13.1. Đồng bộ với A1
-        Nếu user đã cung cấp chẩn đoán, A12 không tự sửa chẩn đoán chỉ vì A1_REASON có vẻ không liên quan.
-        Nếu mâu thuẫn rõ và ảnh hưởng output, A12_CHECK = NEEDS_FIX nếu cần user xác nhận và A12_ERROR ghi rõ mâu thuẫn cần kiểm tra.
-        Nếu user không cung cấp chẩn đoán, A1_REASON là một nguồn để A12 tự tạo chẩn đoán phù hợp nhất.
-
-    A12.13.2. Đồng bộ với A2
-        A12 không biến tiền sử thành chẩn đoán hiện tại nếu không có căn cứ.
-        Nếu A2 ghi bệnh đã khỏi, A12 không đưa vào chẩn đoán hiện tại.
-        Nếu bệnh nền trong A2 đang hoạt động hoặc đang được quản lý trong đợt hiện tại và bệnh cảnh đủ căn cứ, A12 có thể đưa vào chẩn đoán hiện tại theo logic tự tạo.
-        Nếu user ghi rõ “bệnh nền: tăng huyết áp” trong phần chẩn đoán kèm, A12 giữ.
-
-    A12.13.3. Đồng bộ với A3
-        Nếu user không cung cấp chẩn đoán, A3_FINAL là nguồn quan trọng để A12 tự tạo chẩn đoán phù hợp nhất.
-        Không dùng triệu chứng đơn lẻ làm chẩn đoán xác định nếu dữ kiện không đủ.
-        Nếu A3 có triệu chứng đặc hiệu và đủ căn cứ, A12 có thể tạo chẩn đoán phù hợp.
-        Nếu A3 mâu thuẫn chẩn đoán user cung cấp, A12 không tự đổi chẩn đoán user nhưng có thể A12_CHECK = NEEDS_FIX nếu cần xác nhận.
-
-    A12.13.4. Đồng bộ với A4-A11
-        Khám lâm sàng dùng để tăng/giảm độ chắc chắn khi A12 tự tạo chẩn đoán.
-        A12 không viết lại khám lâm sàng.
-        A12 không tự sửa chẩn đoán user cung cấp chỉ vì khám chưa đầy đủ.
-        Nếu khám có dấu nặng nhưng user đã cung cấp chẩn đoán nhẹ hơn, A12 không tự nâng mức độ khi user đã cung cấp chẩn đoán; nếu mâu thuẫn rõ, A12_CHECK = NEEDS_FIX để cần xác nhận.
-        Nếu user không cung cấp chẩn đoán và dấu khám đủ căn cứ, A12 có thể tự tạo chẩn đoán phù hợp nhưng không vượt quá dữ kiện.
-
-    A12.13.5. Đồng bộ với A14
-        A14_STATE chỉ được dùng nếu là kết quả cận lâm sàng đã có.
-        Không dùng cận lâm sàng dự kiến làm căn cứ xác định chẩn đoán.
-        Không dùng “cần làm X-quang” như “X-quang đã có”.
-        Nếu A14 có kết quả phù hợp và user không cung cấp chẩn đoán, A12 có thể tăng độ chắc chắn khi tự tạo chẩn đoán.
-        Nếu A14 chưa có kết quả, A12 chỉ ghi “Theo dõi...” khi bệnh cảnh gợi ý nhưng chưa đủ dữ kiện.
-        Nếu A14 mâu thuẫn chẩn đoán user cung cấp, A12 không tự đổi chẩn đoán user trừ khi user yêu cầu đánh giá lại; có thể A12_CHECK = NEEDS_FIX nếu mâu thuẫn rõ.
-
-A12.14. Quy tắc tạo A12_FINAL
-    A12.14.1. Vai trò của A12_FINAL
-        A12_FINAL là chuỗi chẩn đoán chuẩn dùng cho render bệnh án.
-        A12_FINAL là bản ngắn gọn.
-        A12_FINAL không chứa mã ICD.
-        A12_FINAL không chứa giải thích dài.
-        A12_FINAL không chứa thuốc.
-        A12_FINAL không chứa hướng điều trị.
-        A12_FINAL không chứa kết quả cận lâm sàng trừ khi tên chẩn đoán bắt buộc có yếu tố đó và user đã ghi.
-        A12_FINAL nên kết thúc bằng dấu chấm.
-
-    A12.14.2. Cách trình bày A12_FINAL
-        Nếu có một chẩn đoán, A12_FINAL ghi một dòng chẩn đoán ngắn gọn.
-        Nếu có nhiều chẩn đoán, A12_FINAL có thể ghi các chẩn đoán cách nhau bằng dấu chấm hoặc dấu chấm phẩy.
-        Nếu user cung cấp nhiều chẩn đoán, giữ thứ tự user nếu user không yêu cầu sắp xếp.
-        Nếu có chẩn đoán theo dõi/nghi/loại trừ do user cung cấp, giữ nguyên tiền tố tương ứng.
-        Nếu user cung cấp chẩn đoán với mã ICD, bỏ mã ICD và giữ tên bệnh.
-        Nếu user không cung cấp chẩn đoán và A12 tự tạo nhưng chưa đủ chắc chắn, dùng “Theo dõi...”.
-
-    A12.14.3. Khi chưa đủ dữ kiện
-        Nếu user không cung cấp chẩn đoán nhưng A1-A11/input đủ căn cứ, A12 không né tự tạo chẩn đoán.
-        Nếu dữ kiện quá thiếu để tạo chẩn đoán hợp lý:
-            - A12_FINAL = Chưa đủ dữ kiện xác định chẩn đoán.
-            - A12_DIAGNOSIS_LIST = Chưa đủ dữ kiện xác định chẩn đoán.
-            - A12_CHECK = NEEDS_FIX nếu cần user bổ sung/xác minh.
-            - A12_ERROR ghi rõ cần bổ sung/xác minh dữ kiện nào nếu xác định được.
-        Không dùng thông báo thiếu chẩn đoán chung như output chính khi A1-A11/input đủ căn cứ để tạo chẩn đoán.
-
-    A12.14.4. Chuẩn hóa ngôn ngữ
-        A12_FINAL phải dùng ngôn ngữ y khoa ngắn gọn, rõ ràng.
-        A12 chuẩn hóa tên chẩn đoán theo văn phong bệnh án.
-        A12 chuẩn hóa lỗi chính tả nhẹ nhưng không đổi bản chất bệnh.
-        Không viết câu văn dài.
-        Không viết biện luận.
-        Không viết “bệnh nhân bị...” nếu không cần.
-        Không viết “có thể là...” trừ khi chuyển thành dạng “Theo dõi...” phù hợp.
-        Không viết mã bệnh.
-        Không viết nguồn chẩn đoán.
-        Không viết “dựa vào...” trong A12_FINAL.
-        Không tự chuẩn hóa quá mức làm thay đổi ý nghĩa chẩn đoán.
-
-    A12.14.5. Chuẩn hóa thuật ngữ thường gặp
-        Khi rõ ngữ cảnh và không đổi bản chất chẩn đoán, A12 chuẩn hóa:
-            1. ĐTĐ → Đái tháo đường.
-            2. type 2 hoặc tip 2 → típ 2.
-            3. THA → Tăng huyết áp nếu rõ ngữ cảnh.
-            4. GERD → Bệnh trào ngược dạ dày - thực quản nếu rõ ngữ cảnh.
-            5. CSTL → cột sống thắt lưng nếu nằm trong tên chẩn đoán.
-        Không chuẩn hóa viết tắt nếu không rõ ngữ cảnh.
-        Không thêm mức độ, giai đoạn, biến chứng nếu user không cung cấp hoặc không đủ căn cứ.
-        Không thêm “đợt cấp”, “biến chứng”, “theo dõi” nếu user không cung cấp, trừ khi A12 đang tự tạo và cần “Theo dõi...” vì chưa đủ chắc chắn.
-
-A12.15. Quy tắc tạo A12_DIAGNOSIS_LIST
-    A12.15.1. Vai trò của A12_DIAGNOSIS_LIST
-        A12_DIAGNOSIS_LIST là danh sách chẩn đoán đã chuẩn hóa.
-        A12_DIAGNOSIS_LIST giúp C/O đọc từng chẩn đoán riêng.
-        A12_DIAGNOSIS_LIST không chứa mã ICD.
-        A12_DIAGNOSIS_LIST không phải danh sách chẩn đoán phân biệt.
-
-    A12.15.2. Nguyên tắc danh sách
-        Mỗi chẩn đoán là một mục riêng.
-        Không chứa mã ICD.
-        Không chứa diễn giải dài.
-        Không chứa thuốc.
-        Không chứa hướng điều trị.
-        Không chứa kết quả cận lâm sàng chi tiết.
-        Không chứa bệnh sử.
-        Không chứa khám lâm sàng.
-        Không chứa differential diagnosis/list.
-        Nếu user đã ghi chẩn đoán chính/kèm, có thể ghi:
-            1. Chẩn đoán chính: ...
-            2. Chẩn đoán kèm: ...
-        Nếu user không ghi chính/kèm, không tự đặt chính/kèm khi user đã cung cấp danh sách chẩn đoán.
-
-    A12.15.3. Khi có nhiều chẩn đoán
-        Nếu user cung cấp nhiều chẩn đoán:
-            - A12 tách thành từng mục riêng.
-            - A12 giữ thứ tự user cung cấp nếu user không yêu cầu sắp xếp lại.
-            - Nếu user đã ghi chẩn đoán chính/kèm, A12 giữ phân loại.
-            - Nếu user không phân loại, A12 không tự đặt chính/kèm.
-        Nếu user không cung cấp chẩn đoán và A12 tự tạo nhiều chẩn đoán có căn cứ, A12 có thể sắp xếp theo vấn đề chính hiện tại trước, bệnh kèm có căn cứ sau.
-        Không gộp nhiều chẩn đoán vào một mục nếu chúng là bệnh riêng.
-        Không tách một chẩn đoán thành nhiều bệnh nếu bản chất là một bệnh có biến chứng/đặc điểm đi kèm.
-
-    A12.15.4. Khi quá thiếu dữ kiện
-        Nếu dữ kiện quá thiếu để tạo chẩn đoán hợp lý:
-            - A12_DIAGNOSIS_LIST = Chưa đủ dữ kiện xác định chẩn đoán.
-        Nếu dùng chẩn đoán theo dõi:
-            - Mỗi chẩn đoán theo dõi là một mục riêng.
-        Không dùng thông báo thiếu chẩn đoán chung như logic chính khi A1-A11/input đủ căn cứ để tạo chẩn đoán.
-
-A12.16. Ví dụ cụ thể
-    A12.16.1. Ví dụ user cung cấp chẩn đoán có mã ICD
-        Input:
-            J20 - Viêm phế quản cấp.
-        A12_STATE:
-            STATE_VERSION = V1
-            UPDATED_AT = 20:00 31/05/2026
-            A12_REV = 1
-            A12_FINAL = Viêm phế quản cấp.
-            A12_DIAGNOSIS_LIST =
-                1. Viêm phế quản cấp.
-            A12_CHECK = PASS
-            A12_ERROR = NONE
-
-    A12.16.2. Ví dụ nhiều chẩn đoán có mã ICD và giữ thứ tự user
-        Input:
-            I10 - Tăng huyết áp. K21 - Bệnh trào ngược dạ dày - thực quản.
-        A12_STATE:
-            STATE_VERSION = V1
-            UPDATED_AT = 20:00 31/05/2026
-            A12_REV = 1
-            A12_FINAL = Tăng huyết áp. Bệnh trào ngược dạ dày - thực quản.
-            A12_DIAGNOSIS_LIST =
-                1. Tăng huyết áp.
-                2. Bệnh trào ngược dạ dày - thực quản.
-            A12_CHECK = PASS
-            A12_ERROR = NONE
-
-    A12.16.3. Ví dụ ICD viết liền tên bệnh và chuẩn hóa thuật ngữ
-        Input:
-            E11ĐTĐ type 2.
-        A12_STATE:
-            STATE_VERSION = V1
-            UPDATED_AT = 20:00 31/05/2026
-            A12_REV = 1
-            A12_FINAL = Đái tháo đường típ 2.
-            A12_DIAGNOSIS_LIST =
-                1. Đái tháo đường típ 2.
-            A12_CHECK = PASS
-            A12_ERROR = NONE
-
-    A12.16.4. Ví dụ user ghi theo dõi
-        Input:
-            Theo dõi viêm ruột thừa cấp.
-        A12_STATE:
-            STATE_VERSION = V1
-            UPDATED_AT = 20:00 31/05/2026
-            A12_REV = 1
-            A12_FINAL = Theo dõi viêm ruột thừa cấp.
-            A12_DIAGNOSIS_LIST =
-                1. Theo dõi viêm ruột thừa cấp.
-            A12_CHECK = PASS
-            A12_ERROR = NONE
-
-    A12.16.5. Ví dụ user ghi nghi ngờ
-        Input:
-            Nghi nhiễm khuẩn tiết niệu.
-        A12_STATE:
-            STATE_VERSION = V1
-            UPDATED_AT = 20:00 31/05/2026
-            A12_REV = 1
-            A12_FINAL = Nghi nhiễm khuẩn tiết niệu.
-            A12_DIAGNOSIS_LIST =
-                1. Nghi nhiễm khuẩn tiết niệu.
-            A12_CHECK = PASS
-            A12_ERROR = NONE
-
-    A12.16.6. Ví dụ user ghi loại trừ
-        Input:
-            Loại trừ hội chứng vành cấp.
-        A12_STATE:
-            STATE_VERSION = V1
-            UPDATED_AT = 20:00 31/05/2026
-            A12_REV = 1
-            A12_FINAL = Loại trừ hội chứng vành cấp.
-            A12_DIAGNOSIS_LIST =
-                1. Loại trừ hội chứng vành cấp.
-            A12_CHECK = PASS
-            A12_ERROR = NONE
-
-    A12.16.7. Ví dụ user không cung cấp chẩn đoán nhưng đủ căn cứ
-        Input:
-            Sốt, ho khạc đờm, ran ẩm hai đáy phổi, X-quang có tổn thương viêm phổi.
-        A12_STATE:
-            STATE_VERSION = V1
-            UPDATED_AT = 20:00 31/05/2026
-            A12_REV = 1
-            A12_FINAL = Viêm phổi.
-            A12_DIAGNOSIS_LIST =
-                1. Viêm phổi.
-            A12_CHECK = PASS
-            A12_ERROR = NONE
-
-    A12.16.8. Ví dụ user không cung cấp chẩn đoán và chưa đủ chắc chắn
-        Input:
-            Đau bụng hố chậu phải, chưa có xét nghiệm, chưa có siêu âm, khám bụng chưa rõ phản ứng thành bụng.
-        A12_STATE:
-            STATE_VERSION = V1
-            UPDATED_AT = 20:00 31/05/2026
-            A12_REV = 1
-            A12_FINAL = Theo dõi viêm ruột thừa cấp.
-            A12_DIAGNOSIS_LIST =
-                1. Theo dõi viêm ruột thừa cấp.
-            A12_CHECK = PASS
-            A12_ERROR = NONE
-
-    A12.16.9. Ví dụ quá thiếu dữ kiện để tạo chẩn đoán hợp lý
-        Input:
-            Người bệnh đến khám, chưa rõ triệu chứng chính, chưa có bệnh sử và chưa có khám lâm sàng.
-        A12_STATE:
-            STATE_VERSION = V1
-            UPDATED_AT = 20:00 31/05/2026
-            A12_REV = 1
-            A12_FINAL = Chưa đủ dữ kiện xác định chẩn đoán.
-            A12_DIAGNOSIS_LIST = Chưa đủ dữ kiện xác định chẩn đoán.
-            A12_CHECK = NEEDS_FIX
-            A12_ERROR = Cần bổ sung triệu chứng chính, bệnh sử hoặc dữ kiện khám để xác định chẩn đoán hiện tại.
-
-    A12.16.10. Ví dụ chẩn đoán chính và chẩn đoán kèm user cung cấp
-        Input:
-            Chẩn đoán chính: Viêm phổi cộng đồng. Chẩn đoán kèm: Tăng huyết áp.
-        A12_STATE:
-            STATE_VERSION = V1
-            UPDATED_AT = 20:00 31/05/2026
-            A12_REV = 1
-            A12_FINAL = Viêm phổi cộng đồng. Tăng huyết áp.
-            A12_DIAGNOSIS_LIST =
-                1. Chẩn đoán chính: Viêm phổi cộng đồng.
-                2. Chẩn đoán kèm: Tăng huyết áp.
-            A12_CHECK = PASS
-            A12_ERROR = NONE
-
-    A12.16.11. Ví dụ mã ICD đơn độc chưa chắc chắn
-        Input:
-            Mã ICD: X99.
-        A12_STATE:
-            STATE_VERSION = V1
-            UPDATED_AT = 20:00 31/05/2026
-            A12_REV = 1
-            A12_FINAL = Chưa đủ dữ kiện xác định chẩn đoán.
-            A12_DIAGNOSIS_LIST = Chưa đủ dữ kiện xác định chẩn đoán.
-            A12_CHECK = NEEDS_FIX
-            A12_ERROR = Cần bổ sung tên bệnh tương ứng với mã ICD hoặc xác nhận chẩn đoán.
-
-    A12.16.12. Ví dụ CREATE full A12_STATE
-        Chưa có A12_STATE cũ; user cung cấp chẩn đoán hiện tại hoặc A1-A11/input đủ căn cứ để A12 tự tạo.
-        Kết quả: CREATE full A12_STATE có UPDATED_AT, A12_REV = 1 và lưu chẩn đoán đã chuẩn hóa.
-
-    A12.16.13. Ví dụ UPDATE full A12_STATE
-        Đã có A12_STATE; user sửa chẩn đoán hoặc dependency hợp lệ A1-A11 và A14 hiện hành nếu đã có hợp lệ làm nội dung thật của A12 thay đổi.
-        Kết quả: UPDATE full A12_STATE có UPDATED_AT mới và tăng A12_REV vì nội dung thật thay đổi.
-
-    A12.16.14. Ví dụ REUSE full A12_STATE
-        Đã có A12_STATE; input/dependency không liên quan hoặc nội dung thật không đổi sau chuẩn hóa.
-        Kết quả: REUSE nhưng vẫn xuất full A12_STATE có UPDATED_AT hợp lệ và giữ nguyên A12_REV.
-
-A12.17. Schema A12_STATE
-    A12.17.1. Schema chuẩn
-        A12_STATE:
-            STATE_VERSION = ...
-            UPDATED_AT = HH:MM dd/mm/yyyy
-            A12_REV = ...
-            A12_FINAL = ...
-            A12_DIAGNOSIS_LIST = ...
-            A12_CHECK = PASS / NEEDS_FIX
-            A12_ERROR = ...
-
-    A12.17.2. Nguyên tắc schema
-        A12_STATE là full state, không phải patch hoặc delta.
-        A12_STATE không cần in trạng thái CREATE / UPDATE / REUSE.
-        A12_STATE không cần STATUS.
-        A12_STATE bắt buộc có UPDATED_AT.
-        UPDATED_AT là metadata quản lý thời điểm cập nhật state, không phải dữ liệu bệnh án.
-        O không render UPDATED_AT.
-        UPDATED_AT khác A12_REV.
-        A12_STATE phải dùng STATE_VERSION của ROUND hiện tại.
-        A12_FINAL là chẩn đoán dùng cho render.
-        A12_DIAGNOSIS_LIST là danh sách chẩn đoán đã chuẩn hóa, không chứa mã ICD.
-        A12_CHECK là kết quả tự kiểm của A12.
-        A12_ERROR chỉ dùng khi A12_CHECK = NEEDS_FIX.
-
-    A12.17.3. Khi A12_CHECK = PASS
-        Nếu A12_CHECK = PASS:
-            - A12_STATE có UPDATED_AT.
-            - A12_FINAL có giá trị hợp lệ.
-            - A12_DIAGNOSIS_LIST có giá trị hợp lệ.
-            - A12_ERROR = NONE.
-
-    A12.17.4. Khi A12_CHECK = NEEDS_FIX
-        Nếu A12_CHECK = NEEDS_FIX:
-            - A12_STATE vẫn có UPDATED_AT.
-            - A12_ERROR phải ghi rõ lỗi.
-            - A12_ERROR phải nêu dữ liệu cần user bổ sung hoặc phần cần sửa.
-            - Không ghi lỗi chung chung nếu xác định được lỗi cụ thể.
-            - A12_FINAL và A12_DIAGNOSIS_LIST vẫn phải có nội dung phù hợp nhất hiện có, ví dụ “Chưa đủ dữ kiện xác định chẩn đoán”.
-
-A12.18. Lỗi không được mắc
-    A12.18.1. Lỗi với chẩn đoán user cung cấp
-        Không tự đổi bản chất chẩn đoán user cung cấp.
-        Không tự thêm chẩn đoán mới nếu user đã cung cấp chẩn đoán.
-        Không tự bỏ chẩn đoán user cung cấp.
-        Không tự nâng mức độ chẩn đoán.
-        Không tự hạ mức độ chẩn đoán.
-        Không tự đổi chẩn đoán xác định thành theo dõi.
-        Không tự đổi chẩn đoán theo dõi thành xác định.
-        Không bỏ “theo dõi”, “nghi”, “loại trừ” nếu user đã ghi.
-        Không tự thêm “theo dõi”, “nghi”, “loại trừ” nếu user không ghi, trừ khi A12 đang tự tạo chẩn đoán và dữ kiện chưa đủ chắc chắn.
-        Không tự sắp xếp lại thứ tự chẩn đoán user cung cấp nếu user không yêu cầu.
-
-    A12.18.2. Lỗi với mã ICD
-        Không để mã ICD trong A12_FINAL.
-        Không để mã ICD trong A12_DIAGNOSIS_LIST.
-        Không mở rộng quá mức từ mã ICD.
-        Không chuẩn hóa mã ICD không chắc chắn thành tên bệnh sai.
-        Không giữ dấu gạch, dấu hai chấm, ngoặc mã ICD thừa trong đầu ra.
-        Không tự thêm biến chứng/mức độ/vị trí bệnh chỉ từ mã ICD nếu không đủ căn cứ.
-
-    A12.18.3. Lỗi với tiền sử
-        Không biến tiền sử thành chẩn đoán hiện tại nếu không có căn cứ.
-        Không đưa bệnh cũ đã ổn định vào chẩn đoán kèm nếu user không yêu cầu và không có căn cứ.
-        Không xóa tiền sử khỏi A2.
-        Không sửa A2_STATE trong A12.
-        Không đưa phẫu thuật cũ vào chẩn đoán hiện tại nếu không phải vấn đề hiện tại.
-
-    A12.18.4. Lỗi khi tự tạo chẩn đoán
-        Không bỏ qua việc tự tạo chẩn đoán khi user không cung cấp chẩn đoán nhưng A1-A11/input đủ căn cứ.
-        Không tự chẩn đoán bệnh nặng nếu dữ kiện không đủ.
-        Không dùng thuốc để suy ra chẩn đoán.
-        Không dùng hướng điều trị để suy ra chẩn đoán.
-        Không dùng cận lâm sàng cần làm như kết quả đã có.
-        Không dùng C_STATE để tạo A12 vì C chạy sau A.
-        Không dùng O_OUTPUT để tạo A12 vì O là render.
-        Không dùng danh sách chẩn đoán phân biệt để thay thế chẩn đoán hiện tại.
-        Không tạo danh sách chẩn đoán phân biệt trong A12.
-        Không tạo danh sách chẩn đoán dài quá mức.
-
-    A12.18.5. Lỗi trình bày A12_FINAL / A12_DIAGNOSIS_LIST
-        Không viết A12_FINAL quá dài.
-        Không viết biện luận trong A12_FINAL.
-        Không viết kết quả khám/cận lâm sàng trong A12_FINAL nếu không phải tên chẩn đoán.
-        Không để A12_FINAL và A12_DIAGNOSIS_LIST mâu thuẫn.
-        Không để A12_DIAGNOSIS_LIST gộp nhiều chẩn đoán riêng vào một mục nếu cần tách.
-        Không để A12_DIAGNOSIS_LIST chứa mã ICD.
-        Không để A12_DIAGNOSIS_LIST chứa thuốc hoặc hướng điều trị.
-        Không để A12_DIAGNOSIS_LIST chứa differential diagnosis/list.
-        Không để A12_FINAL thiếu dấu chấm kết thúc nếu có thể chuẩn hóa.
-
-    A12.18.6. Lỗi vận hành state
-        Không tạo state của A khác.
-        Không dùng patch/delta làm A12_STATE chính thức.
-        Không ghi “giữ nguyên như trước” thay cho nội dung thật.
-        Không bỏ UPDATED_AT khỏi A12_STATE.
-        Không render O trong A12.
-        Không chạy C trong A12.
-        Không suy ngược A12 từ O_OUTPUT.
-        Không đọc A13-A15_STATE của ROUND hiện tại.
-        Không dùng A13-A15_STATE cũ từ ROUND trước để tạo A12 trong ROUND hiện tại.
-        Không đọc C_STATE.
-        Không dùng trí nhớ ẩn hoặc dữ liệu ngoài state hợp lệ.
-
-A12.19. A12_CHECK
-    A12.19.1. Kiểm A12_FINAL
-        Kiểm:
-            1. A12_FINAL có chẩn đoán hiện tại, chẩn đoán theo dõi phù hợp, hoặc thông báo chưa đủ dữ kiện khi dữ kiện thật sự quá thiếu.
-            2. A12_FINAL không chứa mã ICD.
-            3. A12_FINAL không chứa thuốc.
-            4. A12_FINAL không chứa hướng điều trị.
-            5. A12_FINAL không chứa diễn giải dài.
-            6. A12_FINAL không chứa bệnh sử.
-            7. A12_FINAL không chứa khám lâm sàng.
-            8. A12_FINAL không chứa cận lâm sàng chi tiết.
-            9. A12_FINAL không tự đổi bản chất chẩn đoán user cung cấp.
-            10. A12_FINAL giữ đúng “theo dõi”, “nghi”, “loại trừ” nếu user đã ghi.
-            11. A12_FINAL dùng “Theo dõi...” khi A12 tự tạo nhưng chưa đủ chắc chắn.
-            12. A12_FINAL không dùng thông báo thiếu chẩn đoán chung như logic chính khi A1-A11/input đủ căn cứ.
-            13. A12_FINAL nên kết thúc bằng dấu chấm.
-
-    A12.19.2. Kiểm A12_DIAGNOSIS_LIST
-        Kiểm:
-            1. A12_DIAGNOSIS_LIST có danh sách chẩn đoán chuẩn hóa hoặc thông báo chưa đủ dữ kiện khi dữ kiện thật sự quá thiếu.
-            2. Mỗi chẩn đoán là một mục riêng nếu có nhiều chẩn đoán.
-            3. Không có mã ICD.
-            4. Không có thuốc.
-            5. Không có hướng điều trị.
-            6. Không có bệnh sử dài.
-            7. Không có biện luận.
-            8. Không có chẩn đoán phân biệt / differential diagnosis list.
-            9. Không mâu thuẫn với A12_FINAL.
-            10. Không tự bỏ chẩn đoán user cung cấp.
-            11. Giữ thứ tự user cung cấp nếu user không yêu cầu sắp xếp lại.
-
-    A12.19.3. Kiểm dependency và đồng bộ
-        Kiểm:
-            1. Nếu dùng A1_STATE, chẩn đoán không mâu thuẫn rõ với lý do vào viện hoặc có A12_ERROR nếu cần xác nhận.
-            2. Nếu dùng A2_STATE, A12 không biến tiền sử thành chẩn đoán hiện tại nếu không có căn cứ.
-            3. Nếu dùng A3_STATE, A12 không tạo chẩn đoán vượt quá dữ kiện.
-            4. Nếu dùng A4-A11_STATE, A12 chỉ đối chiếu, không viết lại khám lâm sàng.
-            5. Nếu dùng A14_STATE, A12 chỉ dùng kết quả cận lâm sàng đã có.
-            6. A12 không dùng cận lâm sàng dự kiến như kết quả đã có.
-            7. Nếu user không cung cấp chẩn đoán và A1-A11/input đủ căn cứ, A12 đã tự tạo chẩn đoán phù hợp nhất.
-            8. Nếu quá thiếu dữ kiện, A12 dùng “Chưa đủ dữ kiện xác định chẩn đoán” hoặc NEEDS_FIX/cần xác minh theo hệ thống.
-            9. A12 không đọc A13-A15_STATE của ROUND hiện tại.
-            10. A12 không dùng A13-A15_STATE cũ từ ROUND trước để tạo A12 trong ROUND hiện tại.
-            11. A12 không đọc C_STATE.
-            12. A12 không đọc O_OUTPUT hoặc output đã render.
-            13. A12 không phụ thuộc output để quyết định thiếu hay chưa thiếu chẩn đoán.
-            14. A12 không dùng trí nhớ ẩn hoặc dữ liệu ngoài state hợp lệ.
-            15. A12 không tạo dữ kiện mâu thuẫn với user input.
-            16. A12 không viết thay A13-A15.
-
-    A12.19.4. Kiểm A12_STATE
-        Kiểm:
-            1. A12_STATE có STATE_VERSION.
-            2. A12_STATE có UPDATED_AT.
-            3. A12_STATE có A12_REV đúng theo CREATE / UPDATE / REUSE.
-            4. A12_STATE có A12_FINAL.
-            5. A12_STATE có A12_DIAGNOSIS_LIST.
-            6. A12_STATE có A12_CHECK.
-            7. A12_STATE có A12_ERROR.
-            8. Nếu A12_CHECK = NEEDS_FIX, có A12_ERROR rõ.
-            9. Nếu A12_CHECK = PASS, A12_ERROR = NONE.
-            10. A12_STATE là full state, không phải patch hoặc delta.
-            11. A12_STATE sẵn sàng đưa vào full current A_STATE.
-        A_GATE chỉ kiểm kỹ thuật đủ UPDATED_AT, A12_FINAL và A12_DIAGNOSIS_LIST; chất lượng nội dung đã được A12_CHECK khóa trong A12.
-
-    A12.19.5. Kết quả A12_CHECK
-        Nếu đạt:
-            A12_CHECK = PASS.
-            A12_ERROR = NONE.
-        Nếu chưa đạt:
-            A12_CHECK = NEEDS_FIX.
-            A12_ERROR = ghi rõ lỗi.
-
-A12.20. Kết thúc module
-    A12.20.1. Điều kiện hoàn tất A12
-        A12 hoàn tất khi:
-            1. Đã tạo mới, cập nhật hoặc dùng lại full A12_STATE.
-            2. A12_STATE có UPDATED_AT, A12_FINAL và A12_DIAGNOSIS_LIST.
-            3. Đã kiểm A12_CHECK.
-            4. Không tạo dữ liệu ngoài A12_STATE.
-            5. Không tạo state của A khác.
-            6. Không chạy C hoặc O.
-            7. Không render output.
-            8. Không tự dừng STEP A.
-            9. Không chuyển sớm sang A_GATE.
-
-    A12.20.2. Chuyển module tiếp theo
-        Sau khi hoàn tất A12_STATE, chuyển sang A13 theo A_RUN_ORDER.
-        Không chuyển sang A_GATE cho đến khi toàn bộ A1-A15 đã có trạng thái hợp lệ.
+Version: BA S-G-A-C-O V4
+Update: allowlist compact
+
+A12_ROLE
+    A12 là module chuẩn hóa và chốt chẩn đoán hiện tại của ROUND.
+    A12 tạo, cập nhật, reuse và check full A12_STATE để đưa vào full current A_STATE.
+    A12_FINAL là chẩn đoán dùng để render bệnh án.
+    A12_DIAGNOSIS_LIST là danh sách chẩn đoán đã chuẩn hóa, không chứa mã ICD, để C/O đọc từng chẩn đoán.
+    A12 không phải module lý do vào viện, tiền sử, bệnh sử, khám thực thể, cận lâm sàng, hướng xử trí, thuốc/điều trị, bệnh trình hoặc chẩn đoán phân biệt/differential list.
+    A12 không viết biện luận dài và không phải nơi gom dữ liệu chưa xếp được.
+    Nếu chẩn đoán sai, thiếu, lẫn ICD, lẫn thuốc/cận lâm sàng/điều trị hoặc mâu thuẫn nguồn thì sửa tại A12.
+
+A12_ALLOWED_SOURCE
+    A12 chỉ được đọc:
+        1. User input của ROUND hiện tại.
+        2. G_STATE của ROUND hiện tại, chỉ để lấy metadata kỹ thuật ROUND_ID, STATE_VERSION, RUN_MODE nếu hệ thống đang dùng.
+        3. Latest/current A12_STATE nếu đã có, chỉ để UPDATE hoặc REUSE.
+        4. File/module A12.
+        5. A1_STATE, chỉ để đối chiếu lý do vào viện với chẩn đoán.
+        6. A2_STATE, chỉ để phân biệt tiền sử/bệnh nền với chẩn đoán hiện tại.
+        7. A3_STATE, chỉ để đối chiếu bệnh sử và triệu chứng hiện tại.
+        8. A4_STATE đến A11_STATE, chỉ để đối chiếu khám theo hệ cơ quan và căn cứ chẩn đoán.
+        9. A14_STATE chỉ khi là CURRENT_STATE hợp lệ từ ROUND trước hoặc dữ kiện cận lâm sàng thật được user cung cấp trực tiếp trong ROUND hiện tại; A12 không phụ thuộc A14 cùng ROUND nếu A14 chạy sau A13.
+        10. Dữ liệu cận lâm sàng trực tiếp trong user input hiện tại nếu đó là kết quả thật đã có, không phải kế hoạch cần làm.
+    User input thuộc A12 gồm: chẩn đoán trực tiếp, danh sách chẩn đoán, ICD kèm tên bệnh, ICD đơn độc nếu chắc chắn, chẩn đoán chính/kèm, bệnh kèm hiện tại, biến chứng, chẩn đoán theo dõi/nghi ngờ/loại trừ, tên bệnh trong phần “chẩn đoán”, bệnh đang điều trị hiện tại và tên bệnh user yêu cầu thêm.
+    A12 không được đọc A13/A15 của ROUND hiện tại để viết ngược A12 và không dùng A13_STATE/A15_STATE cũ từ ROUND trước để tạo A12 trong ROUND hiện tại.
+    A12 không được dùng thuốc, đơn thuốc, hướng xử trí, hướng điều trị, kế hoạch hoặc kế hoạch xét nghiệm để suy ra chẩn đoán.
+    A12 không được dùng xét nghiệm/hình ảnh cần làm như kết quả đã có.
+    A12 không được dùng chẩn đoán phân biệt của C5 thay thế chẩn đoán hiện tại.
+    A12 không được đọc C_STATE, O_OUTPUT, output đã render, trí nhớ ẩn, dữ liệu ngoài state hợp lệ hoặc full current A_STATE nói chung nếu không qua các state cụ thể được allowlist.
+
+A12_ALLOWED_ACTION
+    A12 chỉ được làm:
+        1. CREATE full A12_STATE khi chưa có A12_STATE hiện hành.
+        2. UPDATE full A12_STATE khi user input hoặc dependency hợp lệ làm nội dung thật A12_FINAL hoặc A12_DIAGNOSIS_LIST thay đổi.
+        3. REUSE full A12_STATE khi đã có A12_STATE hiện hành và input/dependency hợp lệ không làm đổi nội dung thật.
+        4. CHECK A12_STATE.
+        5. Quản lý A12_REV của chính A12.
+        6. Chuẩn hóa chẩn đoán, xóa ICD khỏi output chẩn đoán.
+        7. Tự tạo chẩn đoán khi user không cung cấp nhưng đủ căn cứ hợp lệ.
+        8. Chọn mức chắc chắn phù hợp: chẩn đoán xác định, “Theo dõi...”, hoặc “Chưa đủ dữ kiện xác định chẩn đoán”.
+
+A12_ALLOWED_WRITE
+    A12 chỉ ghi full A12_STATE.
+    A12 không ghi A1-A11, A13-A15, C/O, A_GATE hoặc A_STATE_OUTPUT_SCHEMA.
+    A12 không tự tạo toàn bộ A_MODULE_REV; A12 chỉ cung cấp/quản lý A12_REV để A_GATE/full current A_STATE tổng hợp.
+    A12_STATE là full state, không phải patch/delta.
+    A12 không render output bệnh án.
+
+A12_STATE_SCHEMA
+    A12_STATE:
+        STATE_VERSION = ...
+        UPDATED_AT = HH:MM dd/mm/yyyy
+        A12_REV = ...
+        A12_FINAL = ...
+        A12_DIAGNOSIS_LIST = ...
+        A12_CHECK = PASS / NEEDS_FIX
+        A12_ERROR = ...
+    Không thêm STATUS, HAS_DATA, HAS_EXTRA hoặc field mới khác nếu không có trong contract hiện hành.
+    Không bỏ hoặc đổi tên STATE_VERSION, UPDATED_AT, A12_REV, A12_FINAL, A12_DIAGNOSIS_LIST, A12_CHECK, A12_ERROR.
+    UPDATED_AT là metadata quản lý thời điểm cập nhật state, không render vào bệnh án.
+    UPDATED_AT khác A12_REV; thay đổi UPDATED_AT đơn thuần không làm tăng A12_REV.
+    A12_REV là metadata kỹ thuật của A12 để A_GATE/full current A_STATE tổng hợp vào A_MODULE_REV.
+    A12_FINAL là chẩn đoán dùng để render bệnh án.
+    A12_DIAGNOSIS_LIST là danh sách chẩn đoán đã chuẩn hóa, không chứa ICD.
+    A12_ERROR = NONE khi A12_CHECK = PASS.
+    A12_ERROR ghi lỗi cụ thể khi A12_CHECK = NEEDS_FIX.
+    A12_STATE là full state; CREATE/UPDATE/REUSE không cần in trong A12_STATE chính thức.
+
+A12_LOGIC_RULES
+    1. Khi user đã cung cấp chẩn đoán:
+        - A12 chỉ chuẩn hóa format/ngôn ngữ nhẹ và xóa ICD.
+        - Phải giữ bản chất chẩn đoán user cung cấp.
+        - Không tự thêm, bỏ, đổi, nâng mức độ, hạ mức độ, đổi bệnh, đổi vị trí, đổi bên, đổi biến chứng, đổi giai đoạn hoặc đổi trạng thái chắc chắn nếu user không yêu cầu hoặc không có căn cứ hợp lệ.
+        - Không tự đổi “Theo dõi...”, “Nghi...”, “Nghi ngờ...”, “Loại trừ...” hoặc “Chưa loại trừ...” thành xác định; không tự bỏ các tiền tố này nếu user đã ghi.
+        - Không tự thêm “Theo dõi...” nếu user đã ghi chẩn đoán xác định.
+        - Không tự đặt chẩn đoán chính/kèm nếu user đã cung cấp danh sách nhưng chưa phân loại, trừ khi user yêu cầu.
+        - Giữ thứ tự user cung cấp nếu user không yêu cầu sắp xếp.
+        - Được sửa lỗi chính tả nhẹ, dấu câu, khoảng trắng, tách dòng và chuẩn hóa thuật ngữ thường gặp nếu không đổi bản chất.
+        - Nếu mâu thuẫn rõ cần xác minh, giữ nội dung phù hợp nhất hiện có và đặt A12_CHECK = NEEDS_FIX với A12_ERROR cụ thể.
+    2. Khi user chưa cung cấp chẩn đoán:
+        - Nếu user input/A1-A11/A14 thật hợp lệ có đủ căn cứ, A12 có trách nhiệm tự tạo chẩn đoán phù hợp nhất; không cần user nói “AI hãy chẩn đoán”.
+        - Nếu dữ kiện đủ chắc chắn, A12 tạo chẩn đoán xác định phù hợp.
+        - Nếu dữ kiện gợi ý nhưng chưa đủ chắc chắn, A12 dùng “Theo dõi...”.
+        - Nếu dữ kiện quá thiếu hoặc không thể tự tạo chẩn đoán an toàn, A12_FINAL và A12_DIAGNOSIS_LIST dùng đúng literal “Chưa đủ dữ kiện xác định chẩn đoán”.
+        - Nếu cần user bổ sung/xác minh, A12_CHECK = NEEDS_FIX và A12_ERROR ghi rõ dữ liệu cần bổ sung/xác minh.
+        - Không tự ép chẩn đoán xác định, không tự tạo bệnh nặng, biến chứng hoặc danh sách chẩn đoán quá dài khi thiếu căn cứ.
+        - Không tạo differential list.
+        - Không dùng thuốc, đơn thuốc, hướng điều trị, hướng xử trí, kế hoạch xét nghiệm, C/O hoặc output cũ để tạo chẩn đoán.
+        - Không dùng xét nghiệm “cần làm” như kết quả đã có.
+    3. A12_FINAL format:
+        - Ngắn gọn, là chẩn đoán dùng cho render, nên kết thúc bằng dấu chấm.
+        - Không chứa ICD, thuốc, hướng điều trị, hướng xử trí, diễn giải dài, bệnh sử dài, khám thực thể chi tiết, cận lâm sàng chi tiết hoặc differential list.
+        - Nếu tên chẩn đoán bắt buộc có yếu tố cận lâm sàng và user đã ghi, có thể giữ phần tên bệnh cần thiết nhưng không đưa diễn giải cận lâm sàng dài vào A12_FINAL.
+    4. A12_DIAGNOSIS_LIST format:
+        - Là danh sách chẩn đoán chuẩn hóa; mỗi chẩn đoán là một mục riêng.
+        - Không chứa ICD, thuốc, hướng điều trị, hướng xử trí, diễn giải dài, bệnh sử dài, khám thực thể chi tiết, cận lâm sàng chi tiết hoặc differential list.
+        - Không mâu thuẫn với A12_FINAL, không tự bỏ chẩn đoán user cung cấp, giữ thứ tự user cung cấp nếu user không yêu cầu sắp xếp.
+        - Giữ chẩn đoán chính/kèm nếu user ghi; không tự đặt chính/kèm nếu user không ghi, trừ khi A12 tự tạo chẩn đoán theo contract và đủ căn cứ.
+        - Nếu quá thiếu dữ kiện, dùng đúng literal “Chưa đủ dữ kiện xác định chẩn đoán”.
+
+A12_SPECIAL_RULES
+    1. ICD:
+        - Xóa toàn bộ mã ICD khỏi A12_FINAL và A12_DIAGNOSIS_LIST.
+        - Nếu ICD kèm tên bệnh, giữ tên bệnh và bỏ mã ICD.
+        - Nếu ICD đơn độc và chắc chắn mapping tên bệnh, có thể chuẩn hóa thành tên bệnh.
+        - Nếu ICD đơn độc không chắc chắn hoặc mã đặc biệt có nguy cơ diễn giải sai, A12_CHECK = NEEDS_FIX và A12_ERROR yêu cầu bổ sung/xác nhận tên bệnh tương ứng.
+        - Không để chuỗi kiểu “M17-”, “E11-”, “I10-”, “G63.2*”, “M54.4” tồn tại trong output chẩn đoán.
+        - Không giữ ICD chỉ vì user đã nhập và không tự diễn giải ICD sai.
+    2. Tiền sử A2 và chẩn đoán A12:
+        - Không biến tiền sử/bệnh cũ/đã khỏi thành chẩn đoán hiện tại nếu không có căn cứ bệnh đang hoạt động.
+        - Không đưa bệnh nền ổn định ở A2 vào A12 nếu user không đưa vào chẩn đoán hiện tại và không có căn cứ đang xử lý trong đợt này.
+        - Nếu user đưa bệnh vào danh sách chẩn đoán, đó là chẩn đoán hiện tại cần giữ.
+        - Một bệnh có thể vừa là tiền sử vừa là chẩn đoán hiện tại nếu user/logic tự tạo cho phép và có căn cứ đợt hiện tại.
+        - Bệnh đang điều trị hiện tại có thể là chẩn đoán hiện tại nếu user input và bệnh cảnh hỗ trợ.
+    3. A14 cận lâm sàng thật:
+        - A12 có thể dùng A14_STATE hợp lệ từ CURRENT_STATE hoặc dữ kiện A14 user cung cấp trực tiếp nếu đó là kết quả thật đã có.
+        - A12 không phụ thuộc A14 cùng ROUND nếu A14 chạy sau A13.
+        - A12 không dùng xét nghiệm/hình ảnh “cần làm” như kết quả đã có.
+        - A12 không viết kết quả cận lâm sàng chi tiết vào A12_FINAL hoặc A12_DIAGNOSIS_LIST và không thay A14.
+    4. A13/A15:
+        - A13 xử trí không thuộc A12; A15 thuốc/điều trị không thuộc A12.
+        - Không dùng thuốc, đơn thuốc, hướng xử trí, hướng điều trị hoặc kế hoạch để suy ngược chẩn đoán.
+        - Chỉ được hiểu ngữ cảnh khi có dữ kiện lâm sàng độc lập đủ; thuốc/hướng điều trị không được là căn cứ chính.
+    5. C5/O13 differential:
+        - Chẩn đoán phân biệt/differential list thuộc C5/O13 nếu hệ thống có phần đó.
+        - A12 không tạo danh sách chẩn đoán phân biệt, không phân tích loại trừ nhiều khả năng và không dùng chẩn đoán phân biệt của C5 thay thế A12_FINAL.
+        - A12 chỉ có thể ghi “Theo dõi...” như một chẩn đoán hiện tại khi tự tạo chưa đủ chắc.
+        - Không dùng C_STATE/O_OUTPUT để suy ngược A12.
+    6. Chẩn đoán chính/kèm/biến chứng/thứ tự:
+        - Nếu user ghi chẩn đoán chính/kèm, giữ đúng phân loại đó.
+        - Nếu user ghi biến chứng, giữ đúng biến chứng nếu thuộc chẩn đoán hiện tại.
+        - Nếu user chỉ cung cấp danh sách chưa phân loại, không tự đặt chính/kèm nếu user không yêu cầu, trừ khi A12 tự tạo chẩn đoán theo contract và đủ căn cứ.
+        - Giữ thứ tự user cung cấp nếu user không yêu cầu sắp xếp; không tự đảo thứ tự vì “nghe hợp lý hơn”.
+        - Không tự nâng bệnh kèm thành chẩn đoán chính nếu user không yêu cầu và không đủ căn cứ.
+    7. Thuật ngữ/normalize:
+        - Được chuẩn hóa thuật ngữ thường gặp khi rõ ngữ cảnh và không đổi bản chất.
+        - Ví dụ: ĐTĐ → Đái tháo đường; type/tip 2 → típ 2; THA → Tăng huyết áp; GERD → Bệnh trào ngược dạ dày - thực quản; CSTL → cột sống thắt lưng.
+        - Không chuẩn hóa nếu có nguy cơ đổi bản chất và không sửa tên bệnh theo ý chủ quan nếu user đã cung cấp rõ.
+    8. Literal thiếu dữ kiện:
+        - Giữ đúng literal “Chưa đủ dữ kiện xác định chẩn đoán”.
+        - Dùng khi user không cung cấp chẩn đoán, dữ kiện lâm sàng/cận lâm sàng thật hợp lệ quá thiếu và không thể tự tạo chẩn đoán an toàn.
+        - Không đổi literal thành “Chưa có chẩn đoán”, “Không đủ dữ kiện”, “Thiếu chẩn đoán”, “Chưa xác định” hoặc câu khác.
+
+A12_CHECK_PASS_IF
+    A12_CHECK = PASS khi tất cả điều kiện sau đạt:
+        1. A12_STATE đủ schema, UPDATED_AT hợp lệ, A12_REV hợp lệ.
+        2. A12_FINAL và A12_DIAGNOSIS_LIST hợp lệ, đồng bộ nhau.
+        3. A12_FINAL và A12_DIAGNOSIS_LIST không chứa ICD, thuốc, hướng điều trị, hướng xử trí, biện luận dài, bệnh sử dài, khám thực thể chi tiết, cận lâm sàng chi tiết hoặc differential list.
+        4. Không tự đổi bản chất, không tự bỏ chẩn đoán user và giữ đúng “Theo dõi/Nghi/Loại trừ” nếu user cung cấp.
+        5. Nếu user không cung cấp chẩn đoán nhưng đủ căn cứ, A12 đã tự tạo chẩn đoán phù hợp.
+        6. Nếu gợi ý nhưng chưa chắc, dùng “Theo dõi...”.
+        7. Nếu quá thiếu, dùng đúng “Chưa đủ dữ kiện xác định chẩn đoán”.
+        8. Không dùng thông báo thiếu dữ kiện nếu đủ căn cứ.
+        9. Không dùng thuốc, hướng xử trí, A13, A15, C/O hoặc rendered output để suy chẩn đoán.
+        10. Không dùng xét nghiệm cần làm như kết quả đã có.
+        11. A12_ERROR = NONE.
+
+A12_NEEDS_FIX_IF
+    A12_CHECK = NEEDS_FIX nếu có bất kỳ điều kiện sau:
+        1. Thiếu field schema, A12_FINAL thiếu, A12_DIAGNOSIS_LIST thiếu hoặc A12_FINAL/A12_DIAGNOSIS_LIST mâu thuẫn.
+        2. A12_FINAL hoặc A12_DIAGNOSIS_LIST chứa ICD; ICD đơn độc không chắc tên bệnh.
+        3. A12_FINAL hoặc A12_DIAGNOSIS_LIST chứa thuốc, hướng điều trị, hướng xử trí, bệnh sử dài, khám chi tiết, cận lâm sàng chi tiết, biện luận hoặc differential list.
+        4. Tự đổi bản chất, tự bỏ chẩn đoán user không có lý do, tự thêm chẩn đoán thiếu căn cứ, tự tạo bệnh nặng/biến chứng thiếu căn cứ hoặc đổi “Theo dõi/Nghi/Loại trừ” trái user.
+        5. Dữ kiện quá thiếu hoặc mâu thuẫn cần user xác minh.
+        6. Dùng xét nghiệm cần làm như kết quả đã có.
+        7. Suy chẩn đoán từ thuốc, hướng điều trị, A13, A15, C/O hoặc output render.
+        8. A12_REV thiếu hoặc không hợp lệ.
+        9. A12_ERROR không rõ khi NEEDS_FIX hoặc A12_ERROR không phải NONE khi PASS.
+
+A12_ERROR_RULE
+    Nếu A12_CHECK = PASS thì A12_ERROR = NONE.
+    Nếu A12_CHECK = NEEDS_FIX thì A12_ERROR phải ghi lỗi cụ thể.
+    Nếu thiếu dữ liệu, A12_ERROR phải nêu dữ liệu cần user bổ sung.
+    Nếu mâu thuẫn, A12_ERROR phải nêu điểm mâu thuẫn.
+    Nếu ICD đơn độc không chắc chắn, A12_ERROR phải yêu cầu bổ sung/xác nhận tên bệnh.
+    Nếu sai phạm vi, A12_ERROR phải nêu phần cần sửa.
+    Nếu dùng nguồn bị cấm, A12_ERROR phải nêu nguồn bị cấm.
+    Không ghi lỗi chung chung nếu xác định được lỗi.
+
+A12_REUSE_RULE
+    REUSE khi latest/current A12_STATE có và input/dependency hợp lệ không ảnh hưởng A12 hoặc sau chuẩn hóa nội dung thật A12_FINAL/A12_DIAGNOSIS_LIST không đổi.
+    Khi REUSE, dùng lại nội dung thật latest/current A12_STATE và vẫn in full A12_STATE với STATE_VERSION hiện tại.
+    UPDATED_AT theo ROUND hiện tại hoặc theo contract hiện hành; UPDATED_AT không làm tăng A12_REV nếu nội dung thật không đổi.
+    Không ghi “giữ nguyên như trước”, “reuse A12”, “theo bản trước” hoặc “không đổi” thay nội dung thật.
+    Không dùng patch/delta thay cho A12_FINAL/A12_DIAGNOSIS_LIST.
+    A12_REV giữ nguyên nếu nội dung thật không thay đổi.
+
+A12_REV_RULE
+    CREATE A12_STATE thì A12_REV = 1.
+    UPDATE nếu nội dung thật A12_FINAL hoặc A12_DIAGNOSIS_LIST thay đổi thì A12_REV tăng 1 so với A12_REV hiện hành.
+    REUSE hoặc nội dung thật không đổi thì A12_REV giữ nguyên.
+    A12_REV không tăng hoặc giữ theo RUN_MODE.
+    Thay đổi UPDATED_AT đơn thuần không làm tăng A12_REV.
+    A12_REV là metadata kỹ thuật để A_GATE/full current A_STATE tổng hợp vào A_MODULE_REV.
+    A12 không tự tạo toàn bộ A_MODULE_REV.
+    A12_STATE luôn full state, không patch/delta.
+
+A12_END
+    A12 hoàn tất khi full A12_STATE hợp lệ và A12_CHECK đã xác định.
+    Sau A12 chuyển A13 theo A_RUN_ORDER.
+    Không tự chuyển A_GATE sớm, không chạy C, không render O và không sửa pipeline ngoài A12.
 
 <<< END A12
 
