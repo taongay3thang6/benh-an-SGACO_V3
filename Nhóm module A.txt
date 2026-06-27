@@ -7114,717 +7114,135 @@ A10_END
 
 ```text
 ####################################################################################################
-A11 — KHÁM CƠ QUAN KHÁC
-Version: BA S-G-A-C-O v3
-Update 12:00 04/06/2026 GMT+7
+A11 — KHÁM THỰC THỂ CÁC CƠ QUAN NGOÀI NHÓM CHÍNH A4-A10
 
->>> READ-LOCK: A11
-- Bắt buộc đọc tuần tự toàn bộ A11 từ A11.1 đến A11.18.
-- Không được bỏ qua mục nào.
-- Chỉ tạo full current A11_STATE.
-- Không tạo state của A khác.
-- Không chạy C.
-- Không render O.
-- Không tự dừng STEP A.
-- Không chuyển sớm sang A_GATE.
-- Sau khi hoàn tất A11_STATE, chuyển sang A14 theo A_RUN_ORDER.
-<<< END READ-LOCK: A11
+A11_ROLE
+    A11 chuẩn hóa khám thực thể các cơ quan ngoài nhóm chính A4-A10 và chưa có module riêng.
+    A11 không phải bệnh sử, chẩn đoán, cận lâm sàng, xử trí, thuốc/điều trị, và không phải “sọt gom” mọi dữ liệu chưa xếp được.
+    A11 tạo, cập nhật hoặc dùng lại full A11_STATE cho full current A_STATE; A11_STATE là nguồn chính thức cho dữ liệu khám cơ quan ngoài nhóm chính khi C/O cần.
+    A11 có 2 nhiệm vụ tách biệt:
+        1. Tạo A11_FOR_O1/A11_FOR_O8 cho bất thường cơ quan ngoài nhóm chính nếu có.
+        2. Luôn tạo A11_OTHER_SYSTEMS làm câu kết phần cơ quan còn lại.
+    Nếu khám cơ quan ngoài nhóm chính sai, lẫn module khác, hoặc mâu thuẫn dữ liệu nguồn thì sửa tại A11.
 
-A11.1. Nhiệm vụ của A11
-    A11.1.1. Vai trò chính của A11
-        A11 là module chuẩn hóa khám thực thể các cơ quan ngoài nhóm chính A4-A10.
-        A11 có 2 nhiệm vụ riêng biệt:
-            1. Tạo A11_FOR_O1/A11_FOR_O8 cho các bất thường cơ quan ngoài nhóm chính hiện tại nếu có.
-            2. Luôn tạo A11_OTHER_SYSTEMS làm câu kết luận phần cơ quan còn lại đã khám sơ bộ chưa phát hiện bất thường.
-        A11 tạo full current A11_STATE để đưa vào full current A_STATE của ROUND hiện tại.
-        A11_STATE là nguồn chính thức cho C/O khi cần dữ liệu khám cơ quan ngoài nhóm chính.
-        O chỉ đọc A11_STATE; O không tự viết lại nội dung khám cơ quan ngoài nhóm chính.
-        Chất lượng A11_FOR_O1, A11_FOR_O8 và A11_OTHER_SYSTEMS được khóa trong A11.
+A11_ALLOWED_SOURCE
+    A11 chỉ được đọc:
+        1. User input của ROUND hiện tại, chỉ phần thuộc khám thực thể cơ quan ngoài nhóm chính.
+        2. G_STATE của ROUND hiện tại, chỉ metadata kỹ thuật ROUND_ID, STATE_VERSION, RUN_MODE.
+        3. Latest/current A11_STATE nếu đã có, chỉ để UPDATE/REUSE.
+        4. File/module A11.
+        5. A1_STATE: chỉ để đồng bộ lý do vào viện liên quan cơ quan ngoài nhóm chính.
+        6. A2_STATE: chỉ để đồng bộ tiền sử, bệnh nền, dị ứng, phẫu thuật hoặc yếu tố nguy cơ liên quan cơ quan ngoài nhóm chính.
+        7. A3_STATE: chỉ để đối chiếu triệu chứng cơ quan ngoài nhóm chính, không viết lại bệnh sử.
+        8. A4_STATE: chỉ để phân ranh toàn thân với tổn thương khu trú hoặc cơ quan ngoài nhóm chính.
+        9. A5_STATE: chỉ để đồng bộ bệnh cảnh nặng, không kéo dữ kiện tuần hoàn vào A11.
+        10. A6_STATE: chỉ để phân ranh hô hấp dưới với tai mũi họng hoặc hô hấp trên.
+        11. A7_STATE: chỉ để phân biệt tiêu hóa với cơ quan ngoài nhóm chính.
+        12. A8_STATE: chỉ để phân biệt tiết niệu với sinh dục/phụ khoa/nam khoa.
+        13. A9_STATE: chỉ để phân biệt thần kinh với mắt, tai, tiền đình hoặc cơ quan ngoài nhóm chính.
+        14. A10_STATE: chỉ để phân biệt cơ xương khớp với da, mô mềm, vết thương hoặc cơ quan ngoài nhóm chính.
+    User input được dùng nếu thuộc phạm vi A11: mắt, tai, mũi, họng/amidan, răng hàm mặt, da liễu khu trú, vết thương, vết mổ, áp xe, mô mềm nếu không thuộc A4-A10, sinh dục/phụ khoa/nam khoa nếu có dữ kiện rõ, cơ quan chuyên khoa khác ngoài A4-A10 nếu user cung cấp rõ.
+    Chẩn đoán/mã bệnh/bệnh cảnh cơ quan ngoài nhóm chính chỉ được dùng nếu trực tiếp trong user input, như user-provided context khi RUN_MODE cho phép, không thay cho dấu khám và không phải đọc từ A12_STATE.
+    A11 không được đọc full current A_STATE nói chung nếu không qua các state cụ thể được allowlist; không đọc A12-A15 của ROUND hiện tại để viết ngược A11; không đọc A12_STATE hiện tại/cũ hoặc A14_STATE hiện tại/cũ để tạo dấu khám A11; không dùng chẩn đoán/mã bệnh từ A12 hoặc cận lâm sàng từ A14 để tạo dấu khám mới; không đọc C_STATE/O_OUTPUT/output đã render; không dùng trí nhớ ẩn hoặc dữ liệu ngoài state hợp lệ; không biến A1-A10 thành dữ kiện khám A11 mới ngoài phạm vi contract; không biến chẩn đoán/mã bệnh/CLS/thuốc/hướng điều trị thành nội dung A11.
 
-    A11.1.2. Nội dung A11 tạo ra
-        A11 tạo:
-            1. UPDATED_AT.
-            2. A11_HAS_EXTRA.
-            3. A11_FOR_O1.
-            4. A11_FOR_O8.
-            5. A11_OTHER_SYSTEMS.
-            6. A11_CHECK.
-            7. A11_ERROR nếu A11_CHECK = NEEDS_FIX.
-        A11 giữ metadata kỹ thuật hệ thống nếu đang dùng:
-            1. STATE_VERSION.
-            2. A11_REV.
-            3. CREATE / UPDATE / REUSE như trạng thái xử lý nội bộ.
-            4. Full-state semantics.
-        A11 không tạo field kết luận riêng ngoài các field đã liệt kê.
-        A11_FOR_O1/A11_FOR_O8 chỉ là phần bất thường cơ quan ngoài nhóm chính.
-        A11_OTHER_SYSTEMS là câu kết bắt buộc, tách riêng với A11_FOR_O1/A11_FOR_O8.
+A11_ALLOWED_ACTION
+    A11 chỉ được CREATE A11_STATE, UPDATE A11_STATE, REUSE A11_STATE, CHECK A11_STATE, quản lý A11_REV của chính A11, và chọn mẫu khám theo RUN_MODE + căn cứ hợp lệ.
 
-    A11.1.3. Nguyên tắc trách nhiệm
-        A11 chỉ chịu trách nhiệm với khám thực thể cơ quan ngoài nhóm chính chưa có module riêng.
-        A11 không tạo module riêng cho da liễu, tai mũi họng, mắt, răng hàm mặt, sinh dục, phụ khoa hoặc cơ quan khác.
-        Nếu dữ kiện thuộc A4-A10 thì không đưa vào A11.
-        Nếu dữ kiện cơ quan ngoài nhóm chính sai, phải sửa A11.
-        Nếu A11 bị lẫn với toàn thân, tuần hoàn, hô hấp, tiêu hóa, thận - tiết niệu, thần kinh, cơ xương khớp, cận lâm sàng, chẩn đoán, điều trị hoặc output render, phải sửa A11.
+A11_ALLOWED_WRITE
+    A11 chỉ ghi full A11_STATE; không ghi A1-A10, A12-A15, C/O, A_GATE, A_STATE_OUTPUT_SCHEMA; không tự tạo toàn bộ A_MODULE_REV.
+    A11 chỉ cung cấp/quản lý A11_REV để A_GATE/full current A_STATE tổng hợp; A11_STATE là full state, không patch/delta.
 
-A11.2. Nguồn được đọc
-    A11.2.1. Nguồn được đọc
-        A11 được đọc:
-            1. User input của ROUND hiện tại.
-            2. G_STATE của ROUND hiện tại, chỉ để lấy metadata kỹ thuật: ROUND_ID, STATE_VERSION, RUN_MODE.
-            3. A11_STATE hiện hành mới nhất nếu đã có.
-            4. File/module A11.
-            5. A1_STATE nếu cần đồng bộ lý do vào viện liên quan cơ quan ngoài nhóm chính.
-            6. A2_STATE nếu cần đồng bộ tiền sử, bệnh nền, dị ứng, phẫu thuật hoặc yếu tố nguy cơ liên quan cơ quan ngoài nhóm chính.
-            7. A3_STATE nếu cần đối chiếu triệu chứng cơ quan ngoài nhóm chính, nhưng không viết lại bệnh sử.
-            8. A4_STATE nếu cần phân ranh toàn thân với tổn thương khu trú hoặc cơ quan ngoài nhóm chính.
-            9. A5_STATE nếu cần đồng bộ bệnh cảnh nặng, nhưng không kéo dữ kiện tuần hoàn vào A11.
-            10. A6_STATE nếu cần phân ranh hô hấp dưới với tai mũi họng hoặc hô hấp trên.
-            11. A7_STATE nếu cần phân biệt tiêu hóa với cơ quan ngoài nhóm chính.
-            12. A8_STATE nếu cần phân biệt tiết niệu với sinh dục / phụ khoa / nam khoa.
-            13. A9_STATE nếu cần phân biệt thần kinh với mắt, tai, tiền đình hoặc cơ quan ngoài nhóm chính.
-            14. A10_STATE nếu cần phân biệt cơ xương khớp với da, mô mềm, vết thương hoặc cơ quan ngoài nhóm chính.
+A11_STATE_SCHEMA
+    A11_STATE:
+        STATE_VERSION
+        UPDATED_AT = HH:MM dd/mm/yyyy
+        A11_REV
+        A11_HAS_EXTRA = YES / NO
+        A11_FOR_O1
+        A11_FOR_O8
+        A11_OTHER_SYSTEMS
+        A11_CHECK = PASS / NEEDS_FIX
+        A11_ERROR
+    Không thêm STATUS hoặc field mới khác nếu không có trong contract hiện hành; không bỏ/đổi tên UPDATED_AT, A11_REV, A11_HAS_EXTRA, A11_FOR_O1, A11_FOR_O8, A11_OTHER_SYSTEMS.
+    UPDATED_AT là metadata, không render vào bệnh án, khác A11_REV; thay đổi UPDATED_AT đơn thuần không làm tăng A11_REV.
+    A11_REV là metadata kỹ thuật của A11 để A_GATE/full current A_STATE tổng hợp vào A_MODULE_REV.
+    A11_HAS_EXTRA = YES khi có bất thường cơ quan ngoài nhóm chính hiện tại cần tách dòng; A11_HAS_EXTRA = NO khi không có bất thường hiện tại hoặc dữ kiện đã hết/phủ định/thuộc A4-A10.
+    A11_OTHER_SYSTEMS luôn tồn tại dù A11_HAS_EXTRA = YES hay NO.
+    A11_ERROR = NONE khi A11_CHECK = PASS; A11_ERROR ghi lỗi cụ thể khi A11_CHECK = NEEDS_FIX.
 
-    A11.2.2. Dữ liệu user input có thể dùng cho A11
-        A11 được lấy dữ liệu từ user input nếu dữ liệu đó thuộc khám thực thể cơ quan ngoài nhóm chính hoặc là ngữ cảnh hợp lệ để tạo khám thực thể khi RUN_MODE cho phép:
-            1. Khám mắt; đỏ mắt; đau mắt; nhìn mờ; chảy nước mắt; kết mạc bất thường; xuất tiết mắt; bất thường đồng tử nếu user cung cấp.
-            2. Khám tai; đau tai; chảy dịch tai; ù tai; giảm nghe; ống tai ngoài đỏ/sưng; màng nhĩ bất thường nếu user cung cấp.
-            3. Khám mũi; nghẹt mũi; chảy mũi; đau xoang; dịch mũi; niêm mạc mũi sung huyết; cuốn mũi phù nề nếu user cung cấp.
-            4. Khám họng / amidan; đau rát họng hiện tại; họng đỏ; amidan sưng; giả mạc; xuất tiết mủ; niêm mạc họng bất thường nếu user cung cấp hoặc bệnh cảnh trực tiếp cho phép.
-            5. Khám răng hàm mặt; đau răng; sưng lợi; viêm lợi; áp xe răng; loét miệng; tổn thương niêm mạc miệng khu trú.
-            6. Da liễu khu trú; ban; dát; sẩn; mụn nước; mẩn đỏ; loét; mảng đỏ; chảy dịch; ngứa hoặc nóng rát gắn với vùng tổn thương.
-            7. Vết thương; vết mổ; áp xe; mô mềm nếu user cung cấp và không thuộc A4-A10.
-            8. Sinh dục / phụ khoa / nam khoa nếu user cung cấp dữ kiện rõ hoặc có yêu cầu/bệnh cảnh bắt buộc phải xuất.
-            9. Cơ quan chuyên khoa khác ngoài A4-A10 nếu user cung cấp.
-            10. Chẩn đoán, mã bệnh hoặc bệnh cảnh cơ quan ngoài nhóm chính được user input trực tiếp cung cấp, chỉ dùng như user-provided context và chỉ khi RUN_MODE cho phép chọn mẫu khám phù hợp.
-
-    A11.2.3. Nguồn không dùng do thứ tự chạy và boundary system
-        A11 không đọc A14, A12, A13, A15 của ROUND hiện tại để viết ngược A11 vì các module này chạy sau A11.
-        A11 không đọc A12_STATE của ROUND hiện tại vì A12 chạy sau A11 trong A_RUN_ORDER.
-        A11 không đọc A14_STATE của ROUND hiện tại vì A14 chạy sau A11.
-        A11 không dùng A12_STATE cũ từ ROUND trước để tạo A11 trong ROUND hiện tại.
-        A11 không dùng chẩn đoán hoặc mã bệnh từ A12 để tạo dấu khám cơ quan ngoài nhóm chính mới.
-        Nếu user input có chẩn đoán/mã bệnh/bệnh cảnh cơ quan ngoài nhóm chính trực tiếp, A11 được dùng dữ kiện đó như user-provided context; đây không phải là đọc A12_STATE.
-        A11 không đọc C_STATE.
-        A11 không đọc O_OUTPUT.
-        A11 không đọc output đã render.
-        A11 không dùng trí nhớ ẩn hoặc dữ liệu ngoài state hợp lệ.
-        Các đối chiếu A11 với module chạy sau nếu cần sẽ do tầng tổng hợp/A_GATE hoặc module chạy sau xử lý sau khi các state đó đã có.
-
-A11.3. Phạm vi cơ quan của A11
-    A11 xử lý các cơ quan ngoài nhóm chính A4-A10:
-        1. Da liễu khu trú.
-        2. Tai mũi họng.
-        3. Mắt.
-        4. Răng hàm mặt.
-        5. Sinh dục / phụ khoa / nam khoa nếu user cung cấp dữ kiện rõ hoặc có yêu cầu/bệnh cảnh bắt buộc phải xuất.
-        6. Vết thương / vết mổ / áp xe / mô mềm nếu user cung cấp và không thuộc A4-A10.
-        7. Cơ quan khác ngoài nhóm chính nếu user cung cấp.
-    A11 không xử lý thay A4-A10.
-    A11 không dùng để gom các phần khám chưa biết xếp vào đâu nếu chúng đã thuộc A4-A10.
-
-    A11.3.1. Ranh giới bắt buộc
-        Da niêm mạc toàn thân thuộc A4.
-        Tổn thương da khu trú / bệnh da liễu thuộc A11.
-        Hạch ngoại vi và tuyến giáp thuộc A4.
-        Ho, khó thở, nhịp thở, SpO₂, ran phổi thuộc A6.
-        Đau rát họng, họng đỏ, amidan, giả mạc, nghẹt mũi, chảy mũi, ù tai, đau tai thuộc A11.
-        Đau bụng, khám bụng, gan lách, Mendel thuộc A7.
-        Tiểu buốt và khám thận - tiết niệu thuộc A8.
-        Đau đầu, hoa mắt chóng mặt và dấu thần kinh khu trú thuộc A9.
-        Đau khớp, đau cột sống, đau rễ, Lasègue, Valleix thuộc A10.
-        Đau mắt, đỏ mắt, nhìn mờ thuộc A11 nếu cần mô tả khám mắt.
-
-A11.4. Vai trò của A11 trong hệ STATE
-    A11 tạo A11_STATE để C/O sử dụng.
-    A11_STATE gồm metadata kỹ thuật và các field lâm sàng chuẩn:
-        1. STATE_VERSION nếu hệ thống đang dùng.
-        2. UPDATED_AT = HH:MM dd/mm/yyyy.
-        3. A11_REV nếu hệ thống đang dùng revision.
-        4. A11_HAS_EXTRA = YES / NO.
-        5. A11_FOR_O1.
-        6. A11_FOR_O8.
-        7. A11_OTHER_SYSTEMS.
-        8. A11_CHECK.
-        9. A11_ERROR.
-    UPDATED_AT là metadata quản lý thời điểm cập nhật state, không phải dữ liệu bệnh án.
-    O không render UPDATED_AT.
-    UPDATED_AT khác A11_REV.
-    A11_REV tăng hoặc giữ theo thay đổi nội dung thật của A11_FOR_O1 / A11_FOR_O8 và các field lâm sàng liên quan, không theo UPDATED_AT đơn thuần.
-    A11_STATE là full state, không phải patch/delta.
-
-    A11.4.1. A11_HAS_EXTRA
-        A11_HAS_EXTRA xác định có cơ quan ngoài nhóm chính bất thường hiện tại cần tách dòng hay không.
-        Nếu không có cơ quan ngoài nhóm chính bất thường hiện tại:
-            - A11_HAS_EXTRA = NO.
-            - A11_FOR_O1 = Không xuất dòng cơ quan ngoài nhóm chính trong O1.
-            - A11_FOR_O8 = Không xuất phần cơ quan ngoài nhóm chính trong O8.
-            - A11_OTHER_SYSTEMS = Khám sơ bộ chưa phát hiện bất thường.
-        Nếu có cơ quan ngoài nhóm chính bất thường hiện tại:
-            - A11_HAS_EXTRA = YES.
-            - A11_FOR_O1 chứa từng dòng cơ quan bất thường, mỗi dòng có nhãn cơ quan.
-            - A11_FOR_O8 chứa từng dòng/ý khám thực thể cơ quan bất thường.
-            - A11_OTHER_SYSTEMS = Khám sơ bộ chưa phát hiện bất thường.
-        A11_HAS_EXTRA không bật YES cho triệu chứng đã hết, phủ định rõ, dữ kiện thuộc A4-A10 hoặc nội dung không có khám thực thể hiện tại.
-
-    A11.4.2. A11_OTHER_SYSTEMS
-        A11_OTHER_SYSTEMS luôn đúng chính xác:
-            Khám sơ bộ chưa phát hiện bất thường.
-        A11_OTHER_SYSTEMS không kèm nhãn “Các cơ quan khác:”.
-        O1 tự render nhãn “Các cơ quan khác:” ở cuối phần Khám.
-        O8 render A11_OTHER_SYSTEMS ở dòng cuối mục Khám và không thêm nhãn “Các cơ quan khác”.
-        A11_OTHER_SYSTEMS giữ nguyên dù A11_HAS_EXTRA = YES hay NO.
-        A11_OTHER_SYSTEMS không dùng để ghi bất thường.
-        A11_OTHER_SYSTEMS không dùng để thay A11_FOR_O1 hoặc A11_FOR_O8.
-        A11_OTHER_SYSTEMS không ghi nội dung điều khiển xuất/không xuất.
-        A11_OTHER_SYSTEMS không bị loại bỏ bởi A11_HAS_EXTRA.
-        A11_HAS_EXTRA chỉ điều khiển việc có xuất thêm A11_FOR_O1/A11_FOR_O8 bất thường cơ quan ngoài nhóm chính hay không; câu kết A11_OTHER_SYSTEMS vẫn luôn tồn tại.
-        Khi A11_HAS_EXTRA = NO, O1 vẫn render câu kết “Các cơ quan khác: khám sơ bộ chưa phát hiện bất thường.” từ A11_OTHER_SYSTEMS và O8 vẫn render dòng cuối “Khám sơ bộ chưa phát hiện bất thường.” từ A11_OTHER_SYSTEMS.
-        Khi A11_HAS_EXTRA = YES, O1/O8 render thêm A11_FOR_O1/A11_FOR_O8 trước câu kết; A11_OTHER_SYSTEMS vẫn là câu kết cuối phần khám.
-
-A11.5. Quy tắc CREATE / UPDATE / REUSE A11_STATE
-    CREATE / UPDATE / REUSE là trạng thái xử lý nội bộ của A11.
-    A11 tự đọc user input ROUND hiện tại và dependency hợp lệ để quyết định CREATE / UPDATE / REUSE.
-    G không chọn A11 cần sửa.
-
-    A11.5.1. CREATE A11_STATE
-        CREATE áp dụng khi chưa có A11_STATE hiện hành.
-        A11 tạo full A11_STATE mới từ user input ROUND hiện tại và dependency hợp lệ nếu cần.
-        A11 phải xác định:
-            1. STATE_VERSION nếu hệ thống đang dùng.
-            2. UPDATED_AT.
-            3. A11_REV = 1.
-            4. A11_HAS_EXTRA.
-            5. A11_FOR_O1.
-            6. A11_FOR_O8.
-            7. A11_OTHER_SYSTEMS.
-            8. A11_CHECK.
-            9. A11_ERROR nếu cần.
-
-    A11.5.2. UPDATE A11_STATE
-        UPDATE áp dụng khi user input ROUND hiện tại hoặc dependency hợp lệ làm A11_HAS_EXTRA, A11_FOR_O1, A11_FOR_O8 hoặc A11_OTHER_SYSTEMS thay đổi thật.
-        Dữ liệu có thể ảnh hưởng A11 gồm khám/bệnh cảnh hiện tại liên quan mắt, tai mũi họng, răng hàm mặt, da liễu khu trú, vết thương, vết mổ, áp xe, mô mềm, sinh dục, phụ khoa, nam khoa hoặc cơ quan chuyên khoa khác chưa thuộc A4-A10.
-        Khi UPDATE:
-            - A11 đọc A11_STATE hiện hành mới nhất nếu có.
-            - A11 thay phần bị ảnh hưởng bằng dữ liệu mới.
-            - A11 giữ phần không bị ảnh hưởng bằng nội dung hiện hành mới nhất.
-            - A11_STATE sau UPDATE phải mang STATE_VERSION của ROUND hiện tại nếu hệ thống đang dùng.
-            - UPDATED_AT là thời điểm cập nhật state của ROUND hiện tại.
-            - Nếu A11_FOR_O1 hoặc A11_FOR_O8 thay đổi thật, A11_REV tăng so với A11_REV hiện hành.
-
-    A11.5.3. REUSE A11_STATE
-        REUSE áp dụng khi đã có A11_STATE hiện hành và input không ảnh hưởng A11 hoặc nội dung thật của A11_HAS_EXTRA / A11_FOR_O1 / A11_FOR_O8 / A11_OTHER_SYSTEMS không thay đổi.
-        Nếu dependency hợp lệ A1-A10 được đọc nhưng không làm nội dung thật của A11 thay đổi, A11 REUSE và A11_REV giữ nguyên.
-        A11 dùng lại nội dung thật của A11_STATE hiện hành mới nhất.
-        A11_STATE dùng lại vẫn phải in full nội dung thật và mang STATE_VERSION của ROUND hiện tại nếu hệ thống đang dùng.
-        UPDATED_AT được cập nhật theo full current A11_STATE của ROUND hiện tại.
-        Không được ghi “giữ nguyên như trước” thay cho nội dung thật.
-        Không được chỉ ghi “reuse A11” thay cho A11_FOR_O1 và A11_FOR_O8.
-
-    A11.5.4. Quy tắc A11_REV
-        A11 chỉ quản lý revision của chính A11.
-        A11 không tự tạo toàn bộ A_MODULE_REV.
-        Nếu CREATE A11_STATE: A11_REV = 1.
-        Nếu UPDATE và nội dung thật A11_FOR_O1 hoặc A11_FOR_O8 thay đổi: A11_REV tăng so với A11_REV hiện hành.
-        Nếu REUSE hoặc nội dung thật không đổi: A11_REV giữ nguyên.
-        A11_REV không tăng chỉ vì UPDATED_AT thay đổi.
-        A11_REV là metadata kỹ thuật để A_GATE/full current A_STATE tổng hợp vào A_MODULE_REV.
-
-A11.6. Quy tắc xử lý theo RUN_MODE
-    RUN_MODE là chế độ tạo dữ liệu lấy từ G_STATE; không phải CREATE / UPDATE / REUSE.
-    A11 không tự xác định RUN_MODE; A11 chỉ đọc RUN_MODE từ G_STATE.
-
-    A11.6.1. USER_ONLY
-        USER_ONLY là chế độ thủ công.
-        A11 chỉ dùng dữ liệu cơ quan ngoài nhóm chính user cung cấp.
-        A11 không tự tạo khám mắt, tai mũi họng, răng hàm mặt, da liễu, vết thương, áp xe, mô mềm, sinh dục, phụ khoa hoặc nam khoa.
-        Nếu không có dữ liệu cơ quan ngoài nhóm chính cần ghi nhận:
-            - A11_HAS_EXTRA = NO.
-            - A11_FOR_O1 = Không xuất dòng cơ quan ngoài nhóm chính trong O1.
-            - A11_FOR_O8 = Không xuất phần cơ quan ngoài nhóm chính trong O8.
-            - A11_OTHER_SYSTEMS = Khám sơ bộ chưa phát hiện bất thường.
-            - A11_CHECK = PASS.
-            - A11_ERROR = NONE.
-        Chỉ NEEDS_FIX khi user có cơ quan ngoài nhóm chính, bệnh cảnh hoặc yêu cầu cần xử lý nhưng thiếu dữ kiện tối thiểu và USER_ONLY không cho phép tự hoàn thiện.
-        A11 không đọc O_OUTPUT để quyết định dữ kiện khám cơ quan ngoài nhóm chính có bắt buộc hay không.
-        A11 không tự suy “output đang chạy” từ O.
-        Nếu user cung cấp một phần dữ kiện cơ quan ngoài nhóm chính:
-            - A11 dùng phần đã có.
-            - Không tự thêm phần chưa có nếu RUN_MODE không cho phép.
-            - Không tự thêm âm tính thừa nếu USER_ONLY không cho phép.
-        Nếu user cung cấp bất thường cụ thể, A11 giữ đúng bất thường đó.
-        Ví dụ user ghi amidan sưng đỏ thì A11 ghi amidan sưng đỏ, không đổi thành amidan không sưng to.
-
-    A11.6.2. DEFAULT_COMPLETION
-        DEFAULT_COMPLETION là chế độ bán thủ công.
-        A11 dùng dữ liệu user cung cấp làm nền.
-        Nếu không có cơ quan ngoài nhóm chính bất thường hiện tại:
-            - A11_HAS_EXTRA = NO và dùng đúng mẫu không xuất của A11.4.1.
-            - A11_OTHER_SYSTEMS = Khám sơ bộ chưa phát hiện bất thường.
-        Nếu có lý do vào viện, bệnh sử hoặc triệu chứng hiện tại liên quan cơ quan ngoài nhóm chính trong A1/A3:
-            - A11 được chọn mẫu khám thực thể phù hợp khi không mâu thuẫn dữ kiện user.
-        Nếu có tiền sử hoặc yếu tố nguy cơ liên quan trong A2:
-            - A11 chỉ dùng để định hướng, không biến tiền sử thành dấu khám hiện tại nếu không có căn cứ.
-        Trong DEFAULT_COMPLETION bệnh án thường quy, A11_FOR_O1/A11_FOR_O8/A11_OTHER_SYSTEMS không được chứa no-data placeholder hoặc câu “chưa ghi nhận bất thường rõ”; dù có hay không có cơ quan ngoài nhóm chính bất thường, dùng “Khám sơ bộ chưa phát hiện bất thường.” cho A11_OTHER_SYSTEMS.
-        Nếu có chẩn đoán/mã bệnh/bệnh cảnh cơ quan ngoài nhóm chính trực tiếp trong user input:
-            - A11 được chọn mẫu khám phù hợp nếu RUN_MODE cho phép.
-        Nếu user phủ định bất thường cơ quan ngoài nhóm chính:
-            - A11 giữ đúng phủ định và không tự viết ngược lại.
-        Nếu user cung cấp bất thường cụ thể, A11 giữ đúng bất thường đó và không đổi sang phủ định trái user.
-        Ví dụ user ghi amidan sưng đỏ thì A11 ghi amidan sưng đỏ, không đổi thành amidan không sưng to.
-        Ví dụ user ghi kết mạc hai mắt đỏ, mí mắt hai bên sưng nề nhẹ thì A11 giữ đúng các bất thường này.
-        Không tự tạo tổn thương khu trú hoặc bất thường chuyên khoa nếu không có căn cứ.
-        Không tự thêm âm tính thừa nếu user không cung cấp, bệnh cảnh không cần mô tả để phân biệt hoặc RUN_MODE không cho phép.
-
-    A11.6.3. AUTO_SAMPLE
-        AUTO_SAMPLE là chế độ tự động / tạo mẫu.
-        A11 được tạo khám cơ quan ngoài nhóm chính mẫu phù hợp bệnh cảnh mẫu.
-        Nếu bệnh cảnh mẫu không liên quan cơ quan ngoài nhóm chính:
-            - A11_HAS_EXTRA = NO và dùng đúng mẫu không xuất của A11.4.1.
-        Nếu bệnh cảnh mẫu liên quan mắt, tai mũi họng, răng hàm mặt, da liễu, mô mềm, sinh dục, phụ khoa, nam khoa hoặc cơ quan khác:
-            - A11 tạo dữ kiện khám phù hợp bệnh cảnh mẫu, đặt A11_HAS_EXTRA = YES và tách dòng theo cơ quan.
-        Không dùng logic AUTO_SAMPLE cho ca bệnh thật nếu user đã cung cấp dữ liệu ca bệnh thật.
-
-A11.7. Nguyên tắc chung khi tạo A11
-    A11 là khám thực thể, không phải bệnh sử.
-    Triệu chứng cơ năng thuộc A3/A14; A11 chỉ dùng làm ngữ cảnh để tạo khám thực thể phù hợp khi RUN_MODE cho phép.
-    A11_FOR_O1 và A11_FOR_O8 không bê nguyên triệu chứng cơ năng.
-    A11 không đưa cơ quan thuộc A4-A10 vào A11.
-    A11 không dùng để viết thay A4-A10.
-    A11 không dùng kết quả cận lâm sàng để tự tạo dấu khám nếu user không cung cấp khám tương ứng.
-    Nếu user cung cấp cơ quan ngoài nhóm chính bất thường, A11 ghi đúng cơ quan, vị trí và mô tả thực thể.
-    Nếu nhiều cơ quan ngoài nhóm chính bất thường, A11 tách từng cơ quan thành từng dòng.
-    Nếu không có cơ quan ngoài nhóm chính bất thường, A11 không tạo nội dung giả.
-    Nếu triệu chứng ngoài nhóm chính đã hết trước thời điểm khám, A11 không tự tạo bất thường hiện tại.
-    Nếu user phủ định rõ bất thường cơ quan ngoài nhóm chính, A11 không ghi ngược lại.
-    Nếu A11 có bất thường da/niêm mạc làm mâu thuẫn với cụm “da niêm mạc bình thường”, A4 phải bỏ cụm đó khi cần.
-    A11_OTHER_SYSTEMS luôn giữ đúng: Khám sơ bộ chưa phát hiện bất thường.
-
-A11.8. Tách dòng khi có cơ quan ngoài nhóm chính bất thường
-    Nếu A11_HAS_EXTRA = YES:
-        1. A11_FOR_O1 và A11_FOR_O8 phải tách dòng theo từng cơ quan ngoài nhóm chính.
-        2. Không gộp nhiều cơ quan khác nhau vào một dòng.
-        3. A11_FOR_O1 dùng nhãn cơ quan.
-        4. A11_FOR_O8 ưu tiên bỏ nhãn cơ quan nếu nội dung đã rõ, viết theo văn phong bệnh án chi tiết.
-        5. Sau các dòng cơ quan ngoài nhóm chính bất thường, O dùng A11_OTHER_SYSTEMS để render dòng kết luận phần còn lại.
-        6. Không đưa dòng “Các cơ quan khác” vào A11_FOR_O1 hoặc A11_FOR_O8.
-        7. Không tự thêm cơ quan ngoài nhóm chính nếu không có dữ kiện hoặc bệnh cảnh hợp lệ.
-
-    A11.8.1. Nhãn cơ quan trong A11_FOR_O1
-        Nhãn cơ quan hợp lệ gồm:
-            1. Da liễu:
-            2. Tai mũi họng:
-            3. Mắt:
-            4. Răng hàm mặt:
-            5. Sinh dục:
-            6. Phụ khoa:
-            7. Vết thương:
-            8. Vết mổ:
-            9. Mô mềm:
-            10. Hoặc tên cơ quan cụ thể khác nếu user cung cấp.
-
-A11.9. Dòng kết luận phần còn lại
-    A11_OTHER_SYSTEMS luôn là:
-        Khám sơ bộ chưa phát hiện bất thường.
-    A11_OTHER_SYSTEMS không có nhãn “Các cơ quan khác:”.
-    O1 render nhãn “Các cơ quan khác:” và nội dung kết luận từ A11_OTHER_SYSTEMS ở cuối phần Khám.
-    O8 render A11_OTHER_SYSTEMS ở dòng cuối mục Khám, không thêm nhãn “Các cơ quan khác”.
+A11_LOGIC_RULES
+    Literal bắt buộc: A11_OTHER_SYSTEMS = “Khám sơ bộ chưa phát hiện bất thường.”
+    A11_OTHER_SYSTEMS chỉ chứa câu literal trên; không có nhãn “Các cơ quan khác:”, không chứa bất thường, không chứa câu điều khiển, không bị bỏ khi A11_HAS_EXTRA = YES/NO, không trộn vào A11_FOR_O1/O8. O1 tự render nhãn “Các cơ quan khác:” nếu cần.
     Nếu A11_HAS_EXTRA = NO:
-        - A11_FOR_O1 = Không xuất dòng cơ quan ngoài nhóm chính trong O1.
-        - A11_FOR_O8 = Không xuất phần cơ quan ngoài nhóm chính trong O8.
-        - A11_OTHER_SYSTEMS = Khám sơ bộ chưa phát hiện bất thường.
+        A11_FOR_O1 = “Không xuất dòng cơ quan ngoài nhóm chính trong O1.”
+        A11_FOR_O8 = “Không xuất phần cơ quan ngoài nhóm chính trong O8.”
+        A11_OTHER_SYSTEMS = “Khám sơ bộ chưa phát hiện bất thường.”
+        A11_ERROR = NONE nếu không có lỗi khác.
     Nếu A11_HAS_EXTRA = YES:
-        - A11_FOR_O1 chứa dòng cơ quan ngoài nhóm chính bất thường.
-        - A11_FOR_O8 chứa phần cơ quan ngoài nhóm chính bất thường.
-        - A11_OTHER_SYSTEMS = Khám sơ bộ chưa phát hiện bất thường.
-    A11_FOR_O8 không ghi phủ định phần còn lại.
-    A11_OTHER_SYSTEMS không bỏ đi khi có bất thường.
-    A11_OTHER_SYSTEMS không bỏ đi khi không có bất thường.
-    A11_HAS_EXTRA chỉ điều khiển dòng bất thường; câu kết A11_OTHER_SYSTEMS vẫn được giữ trong O1/O8.
+        A11_FOR_O1 là bản ngắn về bất thường cơ quan ngoài nhóm chính.
+        A11_FOR_O8 chi tiết hơn về bất thường cơ quan ngoài nhóm chính.
+        Nếu nhiều cơ quan, tách dòng theo từng cơ quan; dùng nhãn ngắn hợp lệ như “Da liễu:”, “Tai mũi họng:”, “Mắt:”, “Răng hàm mặt:”, “Sinh dục:”, “Phụ khoa:”, “Nam khoa:”, “Vết thương:” hoặc nhãn chuyên khoa phù hợp nếu user cung cấp.
+        Không đưa dòng “Các cơ quan khác” hoặc A11_OTHER_SYSTEMS vào A11_FOR_O1/O8.
+        A11_FOR_O1/O8 không chứa bệnh sử dài, chẩn đoán, cận lâm sàng, thuốc/hướng xử trí, nội dung thuộc A4-A10, hoặc bất thường tự tạo thiếu căn cứ.
+    Không đổi literal no-data thành “Cơ quan ngoài nhóm chính bình thường”, “Không phát hiện bất thường”, “Chưa ghi nhận bất thường” hoặc câu âm tính giả khác; không nhầm A11_HAS_EXTRA với A10_HAS_DATA; A11_HAS_EXTRA chỉ điều khiển phần bất thường cơ quan ngoài nhóm chính, không điều khiển A11_OTHER_SYSTEMS.
+    CREATE khi chưa có latest/current A11_STATE.
+    UPDATE khi user input hiện tại hoặc dependency hợp lệ làm nội dung thật của A11_HAS_EXTRA/A11_FOR_O1/A11_FOR_O8/A11_OTHER_SYSTEMS thay đổi; dữ liệu ảnh hưởng A11 gồm mắt, tai, mũi, họng/amidan, răng hàm mặt, da liễu khu trú, vết thương, vết mổ, áp xe, mô mềm nếu không thuộc A4-A10, sinh dục/phụ khoa/nam khoa nếu user cung cấp rõ, cơ quan chuyên khoa khác ngoài A4-A10, chỉnh sửa khám cơ quan ngoài nhóm chính, thay đổi A11_HAS_EXTRA, hoặc dependency hợp lệ phát hiện mâu thuẫn cần sửa A11.
+    UPDATE chỉ thay phần bị ảnh hưởng; phần không bị ảnh hưởng lấy từ latest/current A11_STATE; state sau UPDATE dùng STATE_VERSION của ROUND hiện tại.
+    REUSE khi đã có latest/current A11_STATE và input/dependency hợp lệ không ảnh hưởng A11; REUSE vẫn in nội dung thật, không ghi “giữ nguyên như trước”, “reuse A11”, “theo bản trước”, “không đổi”.
+    RUN_MODE lấy từ G_STATE; A11 không tự xác định RUN_MODE; RUN_MODE độc lập với CREATE/UPDATE/REUSE.
+    USER_ONLY: chỉ dùng dữ kiện khám cơ quan ngoài nhóm chính user cung cấp; không tự tạo khám/bất thường chuyên khoa/tổn thương da/loét/chảy dịch/mủ/bội nhiễm/nhiễm trùng/amidan sưng to/giả mạc/xuất tiết mủ/âm tính tai mũi họng-mắt-răng-sinh dục/giảm thị lực/tổn thương giác mạc/xuất tiết mắt/khí hư/ra máu âm đạo/đau tinh hoàn/loét sinh dục/dữ kiện nhạy cảm nếu user không cung cấp; nếu không có A11_STATE hợp lệ để reuse và thiếu dữ kiện tối thiểu nhưng có bệnh cảnh/yêu cầu cần xử lý mà USER_ONLY không được tự hoàn thiện thì A11_CHECK = NEEDS_FIX và A11_ERROR ghi rõ thiếu dữ kiện khám cơ quan ngoài nhóm chính; không biến triệu chứng/bệnh sử/chẩn đoán/mã bệnh/CLS/thuốc thành dấu khám.
+    DEFAULT_COMPLETION: được chọn mẫu khám thực thể phù hợp khi an toàn, không mâu thuẫn user; được chuyển triệu chứng/bệnh cảnh user-provided thành câu khám thực thể phù hợp khi an toàn; nếu không có bất thường cơ quan ngoài nhóm chính hiện tại cần tách dòng thì dùng A11_HAS_EXTRA = NO và literal no-data; A11_OTHER_SYSTEMS vẫn luôn đúng literal; không tự thêm bất thường chuyên khoa mới, tổn thương/bất thường nặng, giả mạc, xuất tiết mủ, amidan sưng to, tổn thương da/mủ/áp xe/bội nhiễm, khí hư/ra máu/đau tinh hoàn/loét sinh dục nếu không có căn cứ; không trái user/dependency; phủ định rõ của user phải được giữ, không ghi ngược lại thành bất thường.
+    AUTO_SAMPLE: chỉ dùng cho ca mẫu; có thể tạo khám cơ quan ngoài nhóm chính phù hợp bệnh cảnh mẫu; không áp dụng cho ca bệnh thật đã có dữ liệu user; không đọc ngược A12-A15 để tạo A11.
 
-A11.10. Da liễu / ngoài da / vết thương / mô mềm
-    A11.10.1. Da liễu khu trú
-        A11 xử lý tổn thương da khu trú hoặc bệnh da liễu.
-        A11 không xử lý da niêm mạc toàn thân bình thường; phần đó thuộc A4.
-        Nếu có tổn thương da khu trú, A11 phải ghi:
-            1. Vị trí.
-            2. Dạng tổn thương.
-            3. Màu sắc nếu có.
-            4. Mụn nước / ban / mẩn đỏ / loét / chảy dịch nếu có.
-            5. Ngứa / nóng rát chỉ ghi khi gắn với vùng tổn thương và cần mô tả tổn thương.
-        Không tự tạo loét, chảy dịch, bội nhiễm hoặc âm tính phần còn lại nếu không có căn cứ.
-        Không viết chẩn đoán da liễu thay cho khám da.
-        Nếu A11 có bất thường da/niêm mạc làm mâu thuẫn với cụm “da niêm mạc bình thường”, A4 không được ghi cụm đó.
-        Mẫu A11_FOR_O1:
-            Da liễu: Da vùng [vị trí] có [mô tả tổn thương].
-        Mẫu A11_FOR_O8:
-            Da vùng [vị trí] có [mô tả tổn thương chi tiết hơn].
+A11_SPECIAL_RULES
+    INCLUDE: da liễu khu trú; tổn thương da khu trú; vết thương; vết mổ; áp xe; mô mềm nếu không thuộc A4-A10; tai mũi họng; họng; amidan; mũi; tai; mắt; kết mạc; giác mạc nếu user cung cấp; đồng tử nếu user cung cấp; răng hàm mặt; niêm mạc miệng nếu dữ kiện khu trú chuyên khoa và không thuộc A4 toàn thân; sinh dục/phụ khoa/nam khoa nếu có dữ kiện rõ; cơ quan chuyên khoa khác ngoài A4-A10 nếu user cung cấp rõ; chẩn đoán/mã bệnh/bệnh cảnh user-provided trực tiếp chỉ dùng làm context khi RUN_MODE cho phép, không thay cho dấu khám.
+    EXCLUDE/BOUNDARY: A11 không quản lý bệnh sử; không quản lý triệu chứng cơ năng nếu chỉ là lời kể mà chưa có căn cứ khám hoặc RUN_MODE không cho phép chuyển; không quản lý toàn thân/da niêm mạc toàn thân/hạch ngoại vi/tuyến giáp A4, tuần hoàn A5, hô hấp dưới A6, tiêu hóa A7, thận-tiết niệu A8, thần kinh A9, cơ xương khớp/cột sống/dấu rễ A10, chẩn đoán A12, xử trí A13, cận lâm sàng A14, thuốc/điều trị A15, C_STATE, O_OUTPUT, output render; không phải nơi ghi “các cơ quan khác bình thường” ngoài literal A11_OTHER_SYSTEMS.
+    Ranh giới A4-A10: da niêm mạc toàn thân/hạch/tuyến giáp thuộc A4; tổn thương da khu trú/vết thương/vết mổ/áp xe/mô mềm khu trú nếu không thuộc A4-A10 thì thuộc A11; tuần hoàn thuộc A5; hô hấp dưới thuộc A6; tai mũi họng/hô hấp trên nếu user cung cấp dữ kiện rõ thuộc A11 nhưng không kéo ran phổi/rì rào phế nang/SpO2 vào A11; tiêu hóa thuộc A7; thận-tiết niệu thuộc A8; sinh dục/phụ khoa/nam khoa nếu có dữ kiện rõ có thể thuộc A11 nhưng không kéo triệu chứng tiết niệu A8 sang A11; thần kinh thuộc A9; mắt/tai/tiền đình/cơ quan ngoài nhóm chính chỉ thuộc A11 khi là dữ kiện khám cơ quan ngoài nhóm chính, không kéo dấu thần kinh trung ương A9 sang A11; cơ xương khớp/cột sống/dấu rễ thuộc A10; da/mô mềm gần khớp hoặc chi thể phải phân biệt với dấu khớp/cơ xương khớp A10; A11 không viết thay A4-A10; nếu dữ kiện mâu thuẫn với A4-A10 thì A11_CHECK = NEEDS_FIX và A11_ERROR ghi rõ.
+    Ranh giới A12-A15: không đọc A12_STATE hiện tại/cũ để tạo dấu khám A11; không dùng chẩn đoán/mã bệnh đơn thuần từ A12 để tạo tổn thương da, họng đỏ, amidan sưng, giả mạc, xuất tiết mủ, đỏ mắt, giảm thị lực, tổn thương răng miệng, tổn thương sinh dục/phụ khoa/nam khoa, hoặc bất thường chuyên khoa khác; nếu user input trực tiếp có chẩn đoán/mã bệnh cơ quan ngoài nhóm chính thì có thể dùng như bệnh cảnh trong RUN_MODE hợp lệ nhưng không thay cho dấu khám nếu user không cung cấp; A13 xử trí, A14 cận lâm sàng, A15 thuốc/điều trị không thuộc A11; không biến cận lâm sàng hoặc thuốc/điều trị thành khám thực thể.
+    Triệu chứng cơ năng/bệnh sử: A11 là khám thực thể, không bê nguyên triệu chứng cơ năng vào A11_FOR_O1/O8; triệu chứng cơ năng thuộc A3/C7 nếu chỉ là lời kể; có thể dùng làm ngữ cảnh khi RUN_MODE cho phép và không mâu thuẫn user; triệu chứng đã hết không tạo bất thường hiện tại; triệu chứng hiện tại có thể tạo khám phù hợp khi RUN_MODE cho phép; phủ định rõ thì không ghi ngược lại thành bất thường; không biến bệnh sử hiện tại thành dấu khám nặng nếu thiếu căn cứ.
+    Da liễu/vết thương/mô mềm: ghi vị trí, dạng tổn thương, kích thước nếu user cung cấp; chỉ ghi chảy dịch/mủ/loét/bội nhiễm/nhiễm trùng khi user cung cấp hoặc có căn cứ rõ; không tự tạo các dấu này; không biến tổn thương da toàn thân thuộc A4 hoặc dấu khớp/cơ xương khớp A10 thành A11.
+    Tai mũi họng: đau rát họng, họng đỏ, amidan, giả mạc, xuất tiết mủ, nghẹt mũi, chảy mũi, ù tai, đau tai thuộc A11 nếu có dữ kiện rõ; giữ đúng họng đỏ, amidan sưng đỏ, giả mạc, xuất tiết mủ nếu user cung cấp; không tự tạo giả mạc/xuất tiết mủ/amidan sưng to/âm tính tai mũi họng nếu không có căn cứ; không đổi amidan sưng đỏ thành phủ định; không kéo hô hấp dưới A6 vào A11.
+    Mắt: đỏ mắt, đau mắt, nhìn mờ, chảy nước mắt, kết mạc, xuất tiết, đồng tử nếu user cung cấp thuộc A11 hoặc dùng làm context phù hợp; nhìn mờ là triệu chứng cơ năng, không bê nguyên nếu không có khám tương ứng hoặc RUN_MODE không cho phép; không tự tạo giảm thị lực/tổn thương giác mạc/xuất tiết mủ/âm tính mắt nếu không có căn cứ; không kéo dấu thần kinh trung ương A9 vào A11.
+    Răng hàm mặt/sinh dục/phụ khoa/nam khoa: chỉ ghi khi user cung cấp dữ kiện rõ hoặc bệnh cảnh bắt buộc; không tự tạo tổn thương răng miệng/khí hư/ra máu âm đạo/đau tinh hoàn/loét sinh dục nếu không có căn cứ; không viết chẩn đoán thay khám; không tạo dữ liệu nhạy cảm nếu user không cung cấp.
+    Dữ kiện ngoài contract A11 không được tự render vào A11_FOR_O1/O8; nếu cần xuất hiện trong bệnh án thì A11_CHECK = NEEDS_FIX và A11_ERROR nêu cần mở rộng contract hoặc xử lý nguồn phù hợp; không tự mở rộng A11_FOR_O1/O8 để chứa field ngoài contract.
 
-    A11.10.2. Vết thương / vết mổ / áp xe / mô mềm
-        A11 giữ nhóm vết thương / vết mổ / áp xe / mô mềm nếu user cung cấp và không thuộc A4-A10.
-        Nhóm này được xem là cơ quan khác ngoài nhóm chính hoặc tổn thương khu trú ngoài A4-A10.
-        Nếu có vết thương, vết mổ, áp xe hoặc tổn thương mô mềm, A11 phải ghi:
-            1. Vị trí.
-            2. Kích thước nếu user cung cấp.
-            3. Dạng tổn thương.
-            4. Sưng/nóng/đỏ/đau nếu có dữ kiện khám thực thể.
-            5. Chảy dịch/chảy mủ/chảy máu nếu user cung cấp hoặc có căn cứ rõ.
-            6. Tình trạng vết thương/vết mổ nếu user cung cấp.
-        Không tự tạo nhiễm trùng vết thương, chảy dịch, chảy mủ, áp xe hoặc bội nhiễm nếu không có căn cứ.
-        A11_FOR_O1 dùng nhãn phù hợp: Vết thương:, Vết mổ:, Mô mềm:, hoặc Da liễu: nếu bản chất là tổn thương da khu trú.
-        A11_FOR_O8 không đưa phủ định phần còn lại.
+A11_CHECK_PASS_IF
+    PASS khi A11_STATE đủ schema; UPDATED_AT hợp lệ; có A11_REV; A11_HAS_EXTRA hợp lệ YES/NO; A11_FOR_O1 và A11_FOR_O8 hợp lệ theo A11_HAS_EXTRA; A11_OTHER_SYSTEMS tồn tại và đúng literal “Khám sơ bộ chưa phát hiện bất thường.”, không có nhãn “Các cơ quan khác:”, không chứa bất thường hoặc nội dung điều khiển.
+    Nếu A11_HAS_EXTRA = NO thì A11_FOR_O1/A11_FOR_O8 đúng literal no-data, A11_OTHER_SYSTEMS đúng literal, A11_ERROR = NONE nếu không có lỗi khác.
+    Nếu A11_HAS_EXTRA = YES thì A11_FOR_O1/O8 có nội dung thực thể cơ quan ngoài nhóm chính hợp lệ, đúng nhãn/tách dòng/scope, không chứa A4-A10, bệnh sử dài, chẩn đoán, cận lâm sàng, thuốc/hướng xử trí, bất thường tự tạo thiếu căn cứ, không đổi bất thường user cung cấp thành phủ định, không bê triệu chứng đã hết thành khám hiện tại, và A11_OTHER_SYSTEMS vẫn đúng literal.
+    O1/O8 đúng RUN_MODE, không trái user input, không mâu thuẫn nhau; A11_REV đúng CREATE/UPDATE/REUSE; A11_ERROR = NONE.
 
-A11.11. Tai mũi họng
-    A11 xử lý khám tai mũi họng.
-    Đau rát họng / đau họng hiện tại, niêm mạc họng đỏ, amidan sưng, giả mạc, xuất tiết mủ, nghẹt mũi, chảy mũi, ù tai, đau tai thuộc A11.
-    Ho thuộc A6 khi liên quan hô hấp; họng đỏ / đau rát họng thuộc A11.
-    A6 không được tự ghi khám họng.
-    Nếu A3 có đau rát họng hiện tại hoặc user input trực tiếp có bệnh cảnh tai mũi họng hiện tại, A11 có thể tạo khám họng phù hợp khi RUN_MODE cho phép.
-    Nếu A3 ghi đau rát họng đã hết trước thời điểm khám, A11 không tự tạo họng đỏ hiện tại.
-    Không tự tạo giả mạc, xuất tiết mủ, amidan sưng to hoặc âm tính tai mũi họng nếu không có căn cứ.
-    Các cụm âm tính như “amidan không sưng to” hoặc “không có giả mạc” chỉ ghi khi user cung cấp, bệnh cảnh cần mô tả để phân biệt hoặc RUN_MODE DEFAULT_COMPLETION cho phép và không mâu thuẫn user.
-    Nếu user cung cấp amidan sưng đỏ, A11 phải ghi amidan sưng đỏ và không được đổi thành amidan không sưng to.
-    Không đọc current A12_STATE để tạo khám tai mũi họng.
-    Mẫu A11_FOR_O1:
-        Tai mũi họng: Niêm mạc họng đỏ, amidan sưng đỏ.
-        Tai mũi họng: Niêm mạc họng đỏ, amidan sưng đỏ, nuốt đau. [chỉ khi user cung cấp nuốt đau và hệ thống cho phép ghi triệu chứng đi kèm trong dòng khám]
-    Mẫu A11_FOR_O8:
-        Niêm mạc họng đỏ, amidan sưng đỏ.
-        Niêm mạc họng đỏ, amidan sưng đỏ, nuốt đau. [chỉ khi user cung cấp nuốt đau và hệ thống cho phép ghi triệu chứng đi kèm trong dòng khám]
+A11_NEEDS_FIX_IF
+    NEEDS_FIX nếu thiếu field schema; A11_HAS_EXTRA không hợp lệ; A11_FOR_O1 hoặc A11_FOR_O8 không khớp A11_HAS_EXTRA; A11_OTHER_SYSTEMS thiếu/sai literal/có nhãn “Các cơ quan khác:”/chứa bất thường/chứa nội dung điều khiển; USER_ONLY thiếu dữ kiện tối thiểu trong bối cảnh cần xử lý; A11_FOR_O1/O8 thiếu dữ liệu cần thiết, chứa dữ liệu ngoài scope A11, chứa dữ liệu thuộc A4-A10, chứa chẩn đoán/cận lâm sàng/thuốc/hướng điều trị, bê nguyên bệnh sử dài, tự tạo bất thường từ triệu chứng/bệnh sử/chẩn đoán/mã bệnh/CLS, mâu thuẫn user input hoặc mâu thuẫn nhau.
+    NEEDS_FIX nếu DEFAULT_COMPLETION tạo mẫu trái user/dependency; bệnh cảnh có nguy cơ chuyên khoa nặng/mâu thuẫn khiến không thể tự hoàn thiện an toàn; tự tạo bất thường chuyên khoa khi không có căn cứ; đổi bất thường user cung cấp thành phủ định; biến triệu chứng đã hết thành khám hiện tại; dữ kiện ngoài contract A11 cần xuất hiện trong bệnh án nhưng không có nơi xử lý hợp lệ; A11_REV thiếu/không hợp lệ; A11_ERROR không rõ khi NEEDS_FIX hoặc không phải NONE khi PASS.
 
-A11.12. Mắt
-    A11 xử lý khám mắt khi có dữ kiện mắt hiện tại.
-    Dữ kiện mắt gồm: đỏ mắt, đau mắt, nhìn mờ, chảy nước mắt, kết mạc bất thường, xuất tiết mắt, bất thường đồng tử nếu user cung cấp.
-    Nhìn mờ là triệu chứng cơ năng; không bê nguyên vào A11_FOR_O1 hoặc A11_FOR_O8 nếu không có khám mắt tương ứng.
-    Nếu cần mô tả khám mắt, có thể ghi:
-        - Mắt: Kết mạc hai mắt đỏ, mí mắt hai bên sưng nề nhẹ.
-        - Mắt: Kết mạc mắt [bên] đỏ nhẹ, không có xuất tiết nếu user cung cấp hoặc bệnh cảnh cần mô tả để phân biệt.
-    Không tự tạo giảm thị lực, tổn thương giác mạc, xuất tiết mủ hoặc âm tính mắt nếu không có căn cứ.
-    Cụm âm tính như “không có xuất tiết” chỉ ghi khi user cung cấp, bệnh cảnh cần mô tả để phân biệt hoặc RUN_MODE DEFAULT_COMPLETION cho phép và không mâu thuẫn user.
-    Rối loạn nhìn đôi kèm dấu thần kinh khu trú phải được A9 xử lý phần thần kinh nếu có.
-    Nếu user không cung cấp dữ kiện mắt hiện tại và bệnh cảnh không đủ căn cứ, A11 không tự tạo bất thường mắt.
-    Nếu user phủ định bất thường mắt, A11 không ghi ngược lại.
+A11_ERROR_RULE
+    Nếu A11_CHECK = PASS thì A11_ERROR = NONE.
+    Nếu A11_CHECK = NEEDS_FIX thì A11_ERROR phải ghi lỗi cụ thể: thiếu dữ liệu thì nêu dữ liệu cần user bổ sung; mâu thuẫn thì nêu điểm mâu thuẫn; sai phạm vi thì nêu phần cần sửa; sai literal thì nêu literal cần sửa; sai nguồn thì nêu nguồn bị cấm; dữ kiện ngoài contract cần xuất hiện thì nêu cần mở rộng contract hoặc xử lý nguồn phù hợp.
+    Không ghi lỗi chung chung nếu xác định được lỗi.
 
-A11.13. Răng hàm mặt
-    A11 xử lý răng hàm mặt khi user cung cấp dữ kiện.
-    Dữ kiện gồm: đau răng, sưng lợi, viêm lợi, áp xe răng, loét miệng, tổn thương niêm mạc miệng khu trú.
-    Không tự tạo tổn thương răng hàm mặt nếu không có dữ kiện.
-    Không tự tạo nhiễm trùng răng miệng, ổ mủ, loét miệng nếu user không cung cấp.
-    Nếu tổn thương miệng lan tỏa liên quan da niêm mạc toàn thân, cần đồng bộ với A4.
-    Nếu chỉ là đau họng / họng đỏ, ưu tiên A11 tai mũi họng.
-    Mẫu A11_FOR_O1:
-        Răng hàm mặt: [mô tả khám thực thể].
-    Mẫu A11_FOR_O8:
-        [Mô tả khám thực thể chi tiết hơn nếu cần].
+A11_REUSE_RULE
+    REUSE khi latest/current A11_STATE có và input/dependency hợp lệ không ảnh hưởng A11.
+    Khi REUSE, dùng lại nội dung thật của latest/current A11_STATE và vẫn in full A11_STATE với STATE_VERSION hiện tại; UPDATED_AT theo ROUND hiện tại hoặc theo contract hiện hành; không làm tăng A11_REV nếu nội dung thật không đổi.
+    Không ghi “giữ nguyên như trước”, “reuse A11”, “theo bản trước”, “không đổi”; không dùng patch/delta thay cho A11_HAS_EXTRA/A11_FOR_O1/A11_FOR_O8/A11_OTHER_SYSTEMS.
+    A11_REV giữ nguyên nếu nội dung thật không thay đổi; thay đổi metadata UPDATED_AT đơn thuần không làm tăng A11_REV.
 
-A11.14. Sinh dục / phụ khoa / nam khoa và cơ quan khác
-    A11 chỉ ghi sinh dục / phụ khoa / nam khoa hoặc cơ quan khác ngoài nhóm chính khi user cung cấp dữ kiện rõ hoặc bệnh cảnh bắt buộc phải xuất.
-    Không tự tạo khám sinh dục / phụ khoa / nam khoa nếu user không cung cấp và không có yêu cầu.
-    Không tự tạo tổn thương, khí hư, ra máu âm đạo, đau tinh hoàn, loét sinh dục nếu user không cung cấp.
-    Nếu có dữ kiện phụ khoa / sinh dục / nam khoa:
-        1. Ghi vị trí.
-        2. Ghi đặc điểm thực thể.
-        3. Ghi mức độ nếu có.
-        4. Không viết thành chẩn đoán thay khám.
-        5. Không dùng câu quy chiếu nguồn user như output khám nếu chưa chuyển thành mô tả thực thể.
-    Nếu có cơ quan khác ngoài nhóm chính:
-        1. Ghi theo cơ quan cụ thể user cung cấp.
-        2. Không tự mở rộng sang cơ quan không liên quan.
-    Mẫu A11_FOR_O1:
-        [Tên cơ quan]: [mô tả khám thực thể].
-    Mẫu A11_FOR_O8:
-        [Mô tả khám thực thể chi tiết hơn nếu cần].
+A11_REV_RULE
+    CREATE A11_STATE thì A11_REV = 1.
+    UPDATE nếu A11_FOR_O1 hoặc A11_FOR_O8 thay đổi thật thì A11_REV tăng so với A11_REV hiện hành.
+    Nếu A11_HAS_EXTRA thay đổi thật làm thay đổi nội dung lâm sàng thật thì A11_REV tăng.
+    Nếu A11_OTHER_SYSTEMS thay đổi thật khỏi literal chuẩn hoặc được sửa về literal chuẩn thì A11_REV tăng vì nội dung thật của A11_STATE thay đổi.
+    REUSE hoặc input/dependency hợp lệ không làm đổi nội dung thật A11_HAS_EXTRA/A11_FOR_O1/A11_FOR_O8/A11_OTHER_SYSTEMS thì A11_REV giữ nguyên.
+    Thay đổi UPDATED_AT đơn thuần không làm tăng A11_REV; dependency hợp lệ làm nội dung thật thay đổi thì A11 phải UPDATE và tăng A11_REV.
+    A11_REV tăng/giữ theo thay đổi thật của nội dung A11, không theo tên RUN_MODE; A11_REV là metadata kỹ thuật để A_GATE/full current A_STATE tổng hợp vào A_MODULE_REV; A11 không tự tạo toàn bộ A_MODULE_REV; A11_STATE vẫn là full state, không patch/delta.
 
-A11.15. Đồng bộ với A4-A10
-    A11.15.1. Đồng bộ với A4
-        Da niêm mạc toàn thân thuộc A4.
-        Hạch ngoại vi và tuyến giáp thuộc A4.
-        Tổn thương da khu trú thuộc A11.
-        Nếu A11 có bất thường da/niêm mạc làm mâu thuẫn với cụm “da niêm mạc bình thường”, A4 phải bỏ cụm đó khi cần.
-        A11 không sửa A4_STATE, nhưng A11 phải tránh tạo thêm mâu thuẫn.
-
-    A11.15.2. Đồng bộ với A5
-        Mạch, huyết áp, tim và khám tuần hoàn thuộc A5.
-        A11 không ghi mạch, huyết áp hoặc khám tim.
-
-    A11.15.3. Đồng bộ với A6
-        Ho, khó thở, ran phổi, nhịp thở, SpO₂ và khám hô hấp dưới thuộc A6.
-        Khám họng thuộc A11; A6 không tự ghi họng.
-        A11 không đưa ran phổi, rì rào phế nang, SpO₂ hoặc nhịp thở vào A11_FOR_O1/A11_FOR_O8.
-
-    A11.15.4. Đồng bộ với A7-A8
-        Khám bụng, gan lách, Mendel thuộc A7.
-        Khám thận - tiết niệu thuộc A8.
-        Tiểu buốt/tiểu rắt thuần túy thuộc A8, không đưa sang A11 nếu không có dữ kiện sinh dục / phụ khoa / nam khoa.
-
-    A11.15.5. Đồng bộ với A9-A10
-        Dấu thần kinh khu trú, hội chứng màng não thuộc A9.
-        Đau khớp, đau cột sống, đau rễ, Lasègue, Valleix thuộc A10.
-        A11 không ghi yếu liệt, dấu thần kinh khu trú, hội chứng màng não, đau rễ, Lasègue, Valleix hoặc đau khớp/cột sống.
-        Rối loạn nhìn đôi kèm dấu thần kinh khu trú phải do A9 xử lý phần thần kinh nếu có.
-
-A11.16. Triệu chứng đã hết / triệu chứng hiện tại
-    Nếu triệu chứng ngoài nhóm chính hiện tại còn tồn tại, A11 có thể tạo khám thực thể phù hợp khi RUN_MODE cho phép.
-    Nếu triệu chứng ngoài nhóm chính đã hết trước thời điểm khám, A11 không tự tạo bất thường khám hiện tại.
-    Nếu A3 ghi đau rát họng đã điều trị hết:
-        - A11_HAS_EXTRA = NO nếu không còn dấu khám tai mũi họng hiện tại.
-    Nếu A3 ghi hiện tại còn đau rát họng:
-        - A11 có thể ghi niêm mạc họng đỏ nếu phù hợp và không có dữ kiện phủ định.
-    Nếu A3 ghi nổi ban / ngứa hiện tại:
-        - A11 ghi khám da liễu phù hợp khi có đủ căn cứ về vùng tổn thương hoặc RUN_MODE cho phép tạo mẫu phù hợp.
-    Nếu A3 ghi nổi ban / ngứa đã hết:
-        - A11 không tự tạo tổn thương da hiện tại.
-    Nếu user phủ định rõ bất thường cơ quan ngoài nhóm chính:
-        - A11 không được ghi ngược lại.
-
-A11.17. Quy tắc tạo output fields và A11_CHECK
-    A11.17.1. A11_FOR_O1
-        A11_FOR_O1 dùng cho O1 khi có cơ quan ngoài nhóm chính bất thường.
-        A11_FOR_O1 ngắn gọn, cụ thể.
-        A11_FOR_O1 chỉ chứa cơ quan ngoài nhóm chính bất thường.
-        A11_FOR_O1 không chứa dữ kiện thuộc A4-A10.
-        A11_FOR_O1 không bê nguyên triệu chứng cơ năng.
-        A11_FOR_O1 dùng nhãn cơ quan khi có bất thường.
-        Nếu A11_HAS_EXTRA = NO:
-            A11_FOR_O1 = Không xuất dòng cơ quan ngoài nhóm chính trong O1.
-        Nếu A11_HAS_EXTRA = YES, A11_FOR_O1 ghi theo dạng mỗi cơ quan một dòng:
-            - Da liễu: [mô tả khám].
-            - Tai mũi họng: [mô tả khám].
-            - Mắt: [mô tả khám].
-            - Răng hàm mặt: [mô tả khám].
-            - Sinh dục: [mô tả khám].
-            - Phụ khoa: [mô tả khám].
-            - [Tên cơ quan khác]: [mô tả khám].
-        A11_FOR_O1 không đưa dòng “Các cơ quan khác”.
-
-    A11.17.2. A11_FOR_O8
-        A11_FOR_O8 dùng cho O8 khi có cơ quan ngoài nhóm chính bất thường.
-        A11_FOR_O8 đầy đủ hơn A11_FOR_O1 nếu cần.
-        A11_FOR_O8 chỉ chứa cơ quan ngoài nhóm chính bất thường.
-        A11_FOR_O8 không chứa dữ kiện thuộc A4-A10.
-        A11_FOR_O8 không bê nguyên triệu chứng cơ năng.
-        A11_FOR_O8 ưu tiên bỏ nhãn cơ quan nếu nội dung đã rõ theo văn phong bệnh án chi tiết.
-        A11_FOR_O8 đồng bộ với A11_FOR_O1 và không mâu thuẫn.
-        Nếu A11_HAS_EXTRA = NO:
-            A11_FOR_O8 = Không xuất phần cơ quan ngoài nhóm chính trong O8.
-        Nếu A11_HAS_EXTRA = YES:
-            A11_FOR_O8 ghi nội dung khám thực thể ngoài nhóm chính, mỗi cơ quan bất thường một dòng hoặc một ý rõ ràng.
-        A11_FOR_O8 không đưa dòng “Các cơ quan khác”.
-        A11_FOR_O8 không thay thế câu kết A11_OTHER_SYSTEMS.
-        A11_FOR_O8 không đưa phủ định phần còn lại.
-        A11_FOR_O8 không tự thêm âm tính thừa nếu user không cung cấp, bệnh cảnh không cần mô tả để phân biệt hoặc RUN_MODE không cho phép.
-
-    A11.17.3. A11_CHECK
-        A11_CHECK phải kiểm:
-            1. A11_STATE có STATE_VERSION nếu hệ thống đang dùng.
-            2. A11_STATE có UPDATED_AT đúng định dạng HH:MM dd/mm/yyyy.
-            3. A11_STATE có A11_REV nếu hệ thống đang dùng revision.
-            4. A11_STATE có A11_HAS_EXTRA = YES hoặc NO.
-            5. A11_STATE có A11_FOR_O1.
-            6. A11_STATE có A11_FOR_O8.
-            7. A11_STATE có A11_OTHER_SYSTEMS.
-            8. A11_OTHER_SYSTEMS đúng bằng: Khám sơ bộ chưa phát hiện bất thường.
-            9. A11_OTHER_SYSTEMS không có nhãn “Các cơ quan khác:”.
-            10. A11_OTHER_SYSTEMS không chứa bất thường và không chứa nội dung điều khiển xuất/không xuất.
-            11. Nếu A11_HAS_EXTRA = NO, A11_FOR_O1 đúng bằng: Không xuất dòng cơ quan ngoài nhóm chính trong O1.
-            12. Nếu A11_HAS_EXTRA = NO, A11_FOR_O8 đúng bằng: Không xuất phần cơ quan ngoài nhóm chính trong O8.
-            13. Nếu A11_HAS_EXTRA = YES, A11_FOR_O1 có nhãn cơ quan hợp lệ.
-            14. Nếu A11_HAS_EXTRA = YES và có nhiều cơ quan bất thường, A11_FOR_O1/A11_FOR_O8 tách dòng theo cơ quan.
-            15. Nếu A11_HAS_EXTRA = YES, A11_FOR_O8 không chứa phủ định phần còn lại.
-            16. A11_OTHER_SYSTEMS vẫn đúng bằng: Khám sơ bộ chưa phát hiện bất thường.
-            17. A11_OTHER_SYSTEMS không bị bỏ khi A11_HAS_EXTRA = YES.
-            18. A11_OTHER_SYSTEMS không bị bỏ khi A11_HAS_EXTRA = NO.
-            19. A11_HAS_EXTRA chỉ điều khiển dòng bất thường; câu kết A11_OTHER_SYSTEMS vẫn được giữ trong O1/O8.
-            20. A11_FOR_O1/A11_FOR_O8 không bê nguyên triệu chứng cơ năng.
-            21. A11_FOR_O1/A11_FOR_O8 không chứa dữ kiện thuộc A4-A10.
-            22. A11_FOR_O1/A11_FOR_O8 không dùng cận lâm sàng để tự tạo dấu khám.
-            23. A11_FOR_O1/A11_FOR_O8 không tự thêm “amidan không sưng to” nếu user cung cấp amidan sưng đỏ.
-            24. A11_FOR_O1/A11_FOR_O8 không tự thêm “không có giả mạc” nếu user không cung cấp và bệnh cảnh không cần.
-            25. A11_FOR_O1/A11_FOR_O8 không tự thêm “không có xuất tiết” nếu user không cung cấp và bệnh cảnh không cần.
-            26. A11 không đọc current A12/later A/C/O/rendered output/hidden memory.
-            27. A11 không viết thay A4-A10.
-            28. A11_STATE là full state, không phải patch/delta.
-            29. Nếu A11_CHECK = PASS, A11_ERROR = NONE.
-            30. Nếu A11_CHECK = NEEDS_FIX, A11_ERROR ghi rõ lỗi và dữ liệu cần bổ sung.
-
-    A11.17.4. Lỗi không được mắc
-        Không đưa dữ kiện thuộc A4-A10 vào A11.
-        Không đưa cận lâm sàng vào A11 như dấu khám.
-        Không đưa chẩn đoán vào A11_FOR_O1/A11_FOR_O8 thay mô tả khám.
-        Không đưa thuốc, hướng điều trị, bệnh sử dài, tiền sử hoặc lý do vào viện vào A11_FOR_O1/A11_FOR_O8.
-        Không tự tạo bất thường mắt, tai mũi họng, răng hàm mặt, da liễu khu trú, vết thương, vết mổ, áp xe, mô mềm, sinh dục, phụ khoa hoặc nam khoa nếu không có căn cứ.
-        Không tự tạo mủ, chảy dịch, chảy máu, loét, bội nhiễm hoặc dấu nhiễm trùng tại chỗ nếu user không cung cấp hoặc bệnh cảnh không đủ căn cứ.
-        Không tự thêm âm tính thừa trong A11_FOR_O1/A11_FOR_O8 nếu user không cung cấp, bệnh cảnh không cần mô tả để phân biệt hoặc RUN_MODE không cho phép.
-        Không đổi bất thường user cung cấp thành phủ định trái user, ví dụ không đổi “amidan sưng đỏ” thành “amidan không sưng to”.
-        Không mô tả dữ kiện nhạy cảm vượt quá dữ kiện user cung cấp.
-        Không dùng A11_OTHER_SYSTEMS để ghi bất thường hoặc thay A11_FOR_O1/A11_FOR_O8.
-        Không render O trong A11.
-        Không chạy C trong A11.
-        Không suy ngược A11 từ O_OUTPUT.
-
-A11.18. Ví dụ cụ thể và kết thúc module
-    A11.18.1. Ví dụ không có bất thường cơ quan ngoài nhóm chính
-        Input:
-            Không có dữ kiện cơ quan ngoài nhóm chính bất thường hiện tại.
-            RUN_MODE = DEFAULT_COMPLETION.
-        A11_STATE:
-            STATE_VERSION = V1
-            UPDATED_AT = 12:00 04/06/2026
-            A11_REV = 1
-            A11_HAS_EXTRA = NO
-            A11_FOR_O1 = Không xuất dòng cơ quan ngoài nhóm chính trong O1.
-            A11_FOR_O8 = Không xuất phần cơ quan ngoài nhóm chính trong O8.
-            A11_OTHER_SYSTEMS = Khám sơ bộ chưa phát hiện bất thường.
-            A11_CHECK = PASS
-            A11_ERROR = NONE
-
-    A11.18.2. Ví dụ viêm họng
-        Input:
-            Đau họng hiện tại, khám họng đỏ, amidan sưng đỏ.
-            RUN_MODE = DEFAULT_COMPLETION.
-        A11_STATE:
-            STATE_VERSION = V1
-            UPDATED_AT = 12:00 04/06/2026
-            A11_REV = 1
-            A11_HAS_EXTRA = YES
-            A11_FOR_O1 = Tai mũi họng: Niêm mạc họng đỏ, amidan sưng đỏ.
-            A11_FOR_O8 = Niêm mạc họng đỏ, amidan sưng đỏ.
-            A11_OTHER_SYSTEMS = Khám sơ bộ chưa phát hiện bất thường.
-            A11_CHECK = PASS
-            A11_ERROR = NONE
-
-    A11.18.3. Ví dụ tổn thương da khu trú
-        Input:
-            Da vùng cẳng tay phải có mảng đỏ ngứa, kích thước khoảng 3 cm.
-            RUN_MODE = DEFAULT_COMPLETION.
-        A11_STATE:
-            STATE_VERSION = V1
-            UPDATED_AT = 12:00 04/06/2026
-            A11_REV = 1
-            A11_HAS_EXTRA = YES
-            A11_FOR_O1 = Da liễu: Da vùng cẳng tay phải có mảng đỏ ngứa khoảng 3 cm.
-            A11_FOR_O8 = Da vùng cẳng tay phải có mảng đỏ ngứa khoảng 3 cm.
-            A11_OTHER_SYSTEMS = Khám sơ bộ chưa phát hiện bất thường.
-            A11_CHECK = PASS
-            A11_ERROR = NONE
-
-    A11.18.4. Ví dụ khám mắt
-        Input:
-            Kết mạc hai mắt đỏ, mí mắt hai bên sưng nề nhẹ.
-            RUN_MODE = DEFAULT_COMPLETION.
-        A11_STATE:
-            STATE_VERSION = V1
-            UPDATED_AT = 12:00 04/06/2026
-            A11_REV = 1
-            A11_HAS_EXTRA = YES
-            A11_FOR_O1 = Mắt: Kết mạc hai mắt đỏ, mí mắt hai bên sưng nề nhẹ.
-            A11_FOR_O8 = Kết mạc hai mắt đỏ, mí mắt hai bên sưng nề nhẹ.
-            A11_OTHER_SYSTEMS = Khám sơ bộ chưa phát hiện bất thường.
-            A11_CHECK = PASS
-            A11_ERROR = NONE
-
-    A11.18.5. Ví dụ răng hàm mặt
-        Input:
-            Lợi quanh răng hàm dưới phải sưng đỏ.
-            RUN_MODE = DEFAULT_COMPLETION.
-        A11_STATE:
-            STATE_VERSION = V1
-            UPDATED_AT = 12:00 04/06/2026
-            A11_REV = 1
-            A11_HAS_EXTRA = YES
-            A11_FOR_O1 = Răng hàm mặt: Lợi quanh răng hàm dưới phải sưng đỏ.
-            A11_FOR_O8 = Lợi quanh răng hàm dưới phải sưng đỏ.
-            A11_OTHER_SYSTEMS = Khám sơ bộ chưa phát hiện bất thường.
-            A11_CHECK = PASS
-            A11_ERROR = NONE
-
-    A11.18.6. Ví dụ phụ khoa khi user cung cấp khám thực thể
-        Input:
-            Khám phụ khoa ghi khí hư trắng đục ở âm đạo, lượng ít.
-            RUN_MODE = DEFAULT_COMPLETION.
-        A11_STATE:
-            STATE_VERSION = V1
-            UPDATED_AT = 12:00 04/06/2026
-            A11_REV = 1
-            A11_HAS_EXTRA = YES
-            A11_FOR_O1 = Phụ khoa: Âm đạo có khí hư trắng đục lượng ít.
-            A11_FOR_O8 = Âm đạo có khí hư trắng đục lượng ít.
-            A11_OTHER_SYSTEMS = Khám sơ bộ chưa phát hiện bất thường.
-            A11_CHECK = PASS
-            A11_ERROR = NONE
-
-    A11.18.7. Ví dụ nhiều cơ quan ngoài nhóm chính bất thường
-        Input:
-            Họng đỏ, amidan sưng đỏ; da vùng cẳng tay phải có mảng đỏ ngứa.
-            RUN_MODE = DEFAULT_COMPLETION.
-        A11_STATE:
-            STATE_VERSION = V1
-            UPDATED_AT = 12:00 04/06/2026
-            A11_REV = 1
-            A11_HAS_EXTRA = YES
-            A11_FOR_O1 = Tai mũi họng: Niêm mạc họng đỏ, amidan sưng đỏ.
-                         Da liễu: Da vùng cẳng tay phải có mảng đỏ ngứa.
-            A11_FOR_O8 = Niêm mạc họng đỏ, amidan sưng đỏ.
-                         Da vùng cẳng tay phải có mảng đỏ ngứa.
-            A11_OTHER_SYSTEMS = Khám sơ bộ chưa phát hiện bất thường.
-            A11_CHECK = PASS
-            A11_ERROR = NONE
-
-    A11.18.8. Ví dụ USER_ONLY không có dữ liệu cần ghi nhận
-        Input:
-            RUN_MODE = USER_ONLY.
-            User không cung cấp dữ kiện cơ quan ngoài nhóm chính bất thường hiện tại.
-        A11_STATE:
-            STATE_VERSION = V1
-            UPDATED_AT = 12:00 04/06/2026
-            A11_REV = 1
-            A11_HAS_EXTRA = NO
-            A11_FOR_O1 = Không xuất dòng cơ quan ngoài nhóm chính trong O1.
-            A11_FOR_O8 = Không xuất phần cơ quan ngoài nhóm chính trong O8.
-            A11_OTHER_SYSTEMS = Khám sơ bộ chưa phát hiện bất thường.
-            A11_CHECK = PASS
-            A11_ERROR = NONE
-
-    A11.18.9. Ví dụ USER_ONLY cần bổ sung dữ kiện tối thiểu
-        Input:
-            RUN_MODE = USER_ONLY.
-            User yêu cầu tạo khám mắt nhưng không cung cấp dữ kiện tối thiểu về bên mắt hoặc dấu khám.
-        A11_STATE:
-            STATE_VERSION = V1
-            UPDATED_AT = 12:00 04/06/2026
-            A11_REV = 1
-            A11_HAS_EXTRA = NO
-            A11_FOR_O1 = Không xuất dòng cơ quan ngoài nhóm chính trong O1.
-            A11_FOR_O8 = Không xuất phần cơ quan ngoài nhóm chính trong O8.
-            A11_OTHER_SYSTEMS = Khám sơ bộ chưa phát hiện bất thường.
-            A11_CHECK = NEEDS_FIX
-            A11_ERROR = Thiếu dữ kiện tối thiểu để tạo khám mắt trong USER_ONLY.
-
-    A11.18.10. Điều kiện hoàn tất A11
-        A11 hoàn tất khi:
-            1. Đã CREATE, UPDATE hoặc REUSE full current A11_STATE.
-            2. A11_STATE có STATE_VERSION nếu hệ thống đang dùng.
-            3. A11_STATE có UPDATED_AT.
-            4. A11_STATE có A11_REV nếu hệ thống đang dùng revision.
-            5. A11_STATE có A11_HAS_EXTRA.
-            6. A11_STATE có A11_FOR_O1.
-            7. A11_STATE có A11_FOR_O8.
-            8. A11_STATE có A11_OTHER_SYSTEMS.
-            9. Đã kiểm A11_CHECK.
-            10. Không tạo dữ liệu ngoài A11_STATE.
-            11. Không tạo state của A khác.
-            12. Không chạy C.
-            13. Không render O.
-
-    A11.18.11. Chuyển module tiếp theo
-        Sau khi hoàn tất A11_STATE, chuyển sang A14 theo A_RUN_ORDER.
-        Không chuyển sang A_GATE cho đến khi toàn bộ A1-A15 đã có trạng thái hợp lệ.
-        A11 không tự dừng STEP A, không tự chuyển sang A12 và không tự chuyển sang C/O.
+A11_END
+    A11 hoàn tất khi đã tạo mới, cập nhật hoặc dùng lại full A11_STATE; A11_STATE đủ schema gồm UPDATED_AT, A11_REV, A11_HAS_EXTRA, A11_FOR_O1, A11_FOR_O8, A11_OTHER_SYSTEMS, A11_CHECK, A11_ERROR; A11_CHECK đã chạy; A11_ERROR đúng theo PASS/NEEDS_FIX; không tạo dữ liệu ngoài A11_STATE.
+    Sau khi hoàn tất A11_STATE, chuyển sang A14 theo A_RUN_ORDER.
+    Không tự chuyển sang A12.
+    Không tự sửa A_RUN_ORDER, không tự sửa module ngoài A11, không tự chuyển A_GATE/C/O.
 
 <<< END A11
-
-
-```text
-####################################################################################################
 
 A12 — CHẨN ĐOÁN
 Version: BA S-G-A-C-O v3
