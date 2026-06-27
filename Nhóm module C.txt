@@ -44,6 +44,19 @@ C_CORE_SELECTIVE.2. Schema chung Cx_STATE
         Cx_CHECK = PASS / NEEDS_FIX
         Cx_ERROR = ...
 
+C_CORE_SELECTIVE.2A. Runtime output format cho Cx_STATE / selective C_STATE
+    Khi STEP C in Cx_STATE đã chạy/cập nhật/reuse trong ROUND hiện tại:
+        1. Nếu in từng Cx_STATE riêng, mỗi Cx_STATE phải nằm trong đúng một fenced code block riêng kiểu ```text.
+        2. Không render bất kỳ dòng nào thuộc Cx_STATE ngoài fenced code block của chính Cx_STATE đó.
+        3. Không chia cùng một Cx_STATE thành nhiều fenced code block.
+    Khi STEP C in current selective C_STATE dạng bundle chứa nhiều Cx_STATE:
+        1. Toàn bộ bundle current selective C_STATE phải nằm trong đúng một fenced code block duy nhất kiểu ```text.
+        2. Không render bất kỳ dòng nào thuộc bundle selective C_STATE ngoài fenced code block đó.
+        3. Không chia cùng một Cx_STATE trong bundle thành nhiều fenced code block.
+    Mọi giải thích, ghi chú hoặc lời dẫn không thuộc state nếu có phải nằm ngoài fenced code block và không được chen vào nội dung state.
+    Rule này chỉ kiểm container output format khi in runtime; không thay đổi schema, nội dung field, lifecycle CREATE/UPDATE/REUSE, C_RUN_ORDER, C_GATE logic hoặc downstream O render.
+    Với C4_STATE, fenced code block bọc toàn bộ C4_STATE; không bọc riêng C4_FOR_O2, không thêm delimiter vào nội dung C4_FOR_O2 và không biến C4_FOR_O2 thành O2 output.
+
 C_CORE_SELECTIVE.3. C_GATE và kết thúc STEP C
     Nếu C_RUN_ORDER khác NONE:
         1. C_GATE kiểm mỗi Cx trong C_RUN_ORDER đã có Cx_STATE đầy đủ, Cx_REV, Cx_SOURCE_A_REV, Cx_CHECK và Cx_ERROR.
