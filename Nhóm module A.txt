@@ -6884,1053 +6884,236 @@ A9.19. Kết thúc module
 ####################################################################################################
 
 A10 — KHÁM CƠ XƯƠNG KHỚP
-Version: BA S-G-A-C-O v3
-Update 07:54 30/05/2026 GMT+7
+Version: BA S-G-A-C-O v4
+Update: ALLOWLIST COMPACT
 Clinical sync A10: 04/06/2026
 
->>> READ-LOCK: A10
-- Bắt buộc đọc tuần tự toàn bộ A10 từ A10.1 đến A10.19.
-- Không được bỏ qua mục nào.
-- Chỉ tạo full current A10_STATE.
-- Không tạo state của A khác.
-- Không chạy C.
-- Không render O.
-- Không đọc C_STATE, O_OUTPUT, output đã render hoặc trí nhớ ẩn.
-- Sau khi hoàn tất A10_STATE, chuyển sang A11 theo A_RUN_ORDER.
-<<< END READ-LOCK: A10
-
-A10.1. Nhiệm vụ của A10
-    A10.1.1. Vai trò chính của A10
-        A10 là module chuẩn hóa khám cơ xương khớp thực thể, khám cột sống và dấu rễ.
-        A10 tạo A10_STATE để đưa vào full current A_STATE của ROUND hiện tại.
-        A10_STATE là nguồn chính thức cho C/O khi cần dữ liệu cơ xương khớp.
-        O chỉ đọc A10_STATE, không tự viết lại cơ xương khớp.
-        Chất lượng A10_FOR_O1 và A10_FOR_O8 phải được khóa trong A10.
-
-    A10.1.2. Nội dung A10 tạo ra
-        A10 tạo:
-            1. UPDATED_AT.
-            2. A10_HAS_DATA.
-            3. A10_FOR_O1.
-            4. A10_FOR_O8.
-            5. A10_CHECK.
-            6. A10_ERROR nếu A10_CHECK = NEEDS_FIX.
-        A10 vẫn giữ system fields hiện hành nếu hệ thống đang dùng:
-            1. STATE_VERSION.
-            2. A10_REV.
-            3. CREATE / UPDATE / REUSE semantics.
-            4. Full-state semantics.
-
-    A10.1.3. Phạm vi chuyên môn A10
-        A10 xử lý:
-            1. Khám khớp.
-            2. Khám cột sống.
-            3. Đau cột sống lan rễ.
-            4. Đau phần mềm / điểm đau gân cơ nếu user cung cấp.
-            5. Nghiệm pháp cơ xương khớp phù hợp.
-        A10 chỉ chịu trách nhiệm dữ kiện cơ xương khớp, cột sống và dấu rễ.
-        Nếu dữ kiện cơ xương khớp sai, phải sửa A10.
-        Nếu A10 bị lẫn với thần kinh trung ương, toàn thân, tuần hoàn, hô hấp, tiêu hóa, thận - tiết niệu, cơ quan khác hoặc cận lâm sàng, phải sửa A10.
-
-    A10.1.4. Nguyên tắc không bê bệnh sử vào output khám
-        A10 không ghi triệu chứng cơ năng nguyên văn vào A10_FOR_O1 hoặc A10_FOR_O8.
-        Triệu chứng đau khớp, đau cột sống, đau lan và tê bì theo rễ thuộc A3 bệnh sử.
-        A10 chỉ dùng các triệu chứng đó để tạo dấu khám cơ xương khớp phù hợp khi RUN_MODE cho phép hoặc khi user cung cấp dữ kiện khám.
-        A10_FOR_O1 phải ngắn gọn, ưu tiên dấu hiệu chính.
-        A10_FOR_O8 phải chi tiết hơn, ưu tiên trình tự nhìn - sờ - đánh giá - vận động - nghiệm pháp.
-
-A10.2. Nguồn được đọc
-    A10.2.1. Nguồn được đọc
-        A10 được đọc:
-            1. User input của ROUND hiện tại.
-            2. G_STATE của ROUND hiện tại, chỉ để lấy metadata kỹ thuật: ROUND_ID, STATE_VERSION, RUN_MODE.
-            3. A10_STATE hiện hành mới nhất nếu đã có.
-            4. File/module A10.
-            5. A1_STATE nếu cần đối chiếu lý do vào viện liên quan cơ xương khớp / cột sống / đau rễ.
-            6. A2_STATE nếu cần đối chiếu tiền sử cơ xương khớp, chấn thương, thoái hóa, gout, bệnh khớp, loãng xương hoặc yếu tố nguy cơ liên quan.
-            7. A3_STATE nếu cần đối chiếu triệu chứng cơ xương khớp, đau khớp, đau cột sống, đau lan rễ, tê bì theo rễ hoặc hạn chế vận động.
-            8. A4_STATE nếu cần đối chiếu sốt, toàn trạng nặng, phù, da niêm mạc hoặc bệnh cảnh viêm/nhiễm trùng/bệnh hệ thống.
-            9. A5_STATE nếu cần đối chiếu tuần hoàn trong bệnh cảnh nhiễm trùng, đau nhiều, bệnh cảnh nặng hoặc bệnh hệ thống.
-            10. A6_STATE nếu cần đối chiếu hô hấp/toàn trạng trong bệnh cảnh nặng.
-            11. A7_STATE nếu cần phân biệt đau bụng/hạ sườn/hạ vị với đau cơ xương khớp hoặc đau cột sống.
-            12. A8_STATE nếu cần phân biệt đau hông lưng tiết niệu với đau cột sống/thắt lưng.
-            13. A9_STATE nếu cần phân ranh dấu thần kinh thực thể với đau rễ, Lasègue, Valleix, Schober.
-
-    A10.2.2. Dữ liệu user input có thể dùng cho A10
-        A10 được lấy dữ liệu từ user input nếu dữ liệu đó thuộc cơ xương khớp, cột sống hoặc giúp chọn mẫu khám phù hợp:
-            1. Đau khớp.
-            2. Đau nhiều khớp.
-            3. Đau khớp di chuyển.
-            4. Cứng khớp.
-            5. Sưng khớp.
-            6. Nóng khớp.
-            7. Đỏ khớp.
-            8. Ấn đau khớp.
-            9. Hạn chế vận động khớp.
-            10. Biến dạng khớp.
-            11. Tràn dịch khớp.
-            12. Teo cơ nếu user cung cấp.
-            13. Đau cột sống cổ / ngực / thắt lưng.
-            14. Đau cột sống khi ấn.
-            15. Co cứng cơ cạnh sống.
-            16. Hạn chế vận động cột sống.
-            17. Đau thắt lưng lan chân.
-            18. Đau kiểu rễ.
-            19. Tê bì theo rễ trong bệnh cảnh đau rễ/cột sống.
-            20. Nghiệm pháp Lasègue.
-            21. Điểm Valleix.
-            22. Nghiệm pháp Schober.
-            23. Dấu khám cơ xương khớp khác nếu user cung cấp.
-            24. Triệu chứng cơ xương khớp trong user input hoặc A3 để định hướng bệnh cảnh, nhưng không đưa nguyên văn triệu chứng cơ năng vào A10_FOR_O1/O8.
-            25. Chẩn đoán, mã bệnh hoặc bệnh cảnh cơ xương khớp trực tiếp trong user input, ví dụ gout, viêm khớp, thoái hóa khớp, đau cột sống thắt lưng, thoát vị đĩa đệm, hội chứng thắt lưng hông, đau thần kinh tọa, loãng xương.
-            26. User yêu cầu khám chi tiết cơ xương khớp.
-
-    A10.2.3. Nguồn không dùng do thứ tự chạy
-        A10 không đọc A11-A15 của ROUND hiện tại để viết ngược A10 vì các module này chạy sau A10.
-        A10 không đọc A12_STATE của ROUND hiện tại vì A12 chạy sau A10 trong A_RUN_ORDER.
-        A10 không dùng A12_STATE cũ từ ROUND trước để tạo A10 trong ROUND hiện tại.
-        A10 không dùng chẩn đoán hoặc mã bệnh từ A12 để tạo dấu khám cơ xương khớp mới.
-        Nếu user input trực tiếp có chẩn đoán/mã bệnh/bệnh cảnh cơ xương khớp/cột sống/vận động, A10 có thể dùng như user input theo rule hiện hành; đây không phải là đọc A12_STATE.
-        A10 không tự tạo chẩn đoán.
-        Các đối chiếu A10 với module chạy sau nếu cần sẽ do tầng tổng hợp/A_GATE hoặc module chạy sau xử lý sau khi các state đó đã có.
-        A10 không đọc C_STATE.
-        A10 không đọc O_OUTPUT.
-        A10 không đọc output đã render.
-        A10 không dùng trí nhớ ẩn.
-        A10 không dùng dữ liệu ngoài state hợp lệ.
-
-A10.3. Dependency nội bộ
-    A10.3.1. Dependency của A10
-        A10 có thể đọc A1_STATE đến A9_STATE theo đúng mục A10.2.
-        A10 không đọc A11-A15 của ROUND hiện tại.
-        A10 không đọc current A12_STATE.
-        A10 không dùng A12_STATE cũ.
-
-    A10.3.2. Mục đích đọc dependency
-        A1_STATE được dùng để không bỏ sót lý do vào viện liên quan cơ xương khớp / cột sống.
-        A2_STATE được dùng để đồng bộ tiền sử cơ xương khớp, chấn thương, gout, bệnh khớp, loãng xương hoặc yếu tố nguy cơ liên quan.
-        A3_STATE được dùng để đối chiếu triệu chứng cơ xương khớp và bệnh sử hiện tại, sau đó chuyển thành dấu khám phù hợp nếu mode cho phép.
-        A4_STATE được dùng để đồng bộ toàn trạng, sốt, phù hoặc bệnh cảnh viêm/nhiễm trùng/bệnh hệ thống.
-        A5_STATE và A6_STATE được dùng để đồng bộ bệnh cảnh nặng nếu cần.
-        A7_STATE được dùng để phân biệt đau bụng/hạ sườn/hạ vị với đau cơ xương khớp nếu liên quan.
-        A8_STATE được dùng để phân biệt đau hông lưng tiết niệu với đau cột sống/thắt lưng nếu liên quan.
-        A9_STATE được dùng để phân ranh dấu thần kinh thực thể trung ương với đau rễ, Lasègue, Valleix, Schober.
-
-    A10.3.3. Giới hạn dependency
-        Dependency hợp lệ A1-A9 của A10 chỉ dùng để đối chiếu ngữ cảnh, phân ranh, phát hiện mâu thuẫn, tránh bỏ sót và đồng bộ bệnh cảnh.
-        Dependency không được dùng để kéo lý do vào viện, tiền sử, bệnh sử, triệu chứng cơ năng, khám toàn thân, khám tuần hoàn, khám hô hấp, khám tiêu hóa, khám thận - tiết niệu hoặc khám thần kinh vào A10_FOR_O1/A10_FOR_O8.
-        Dependency không được dùng để kéo dữ kiện thần kinh trung ương từ A9 sang A10.
-        A9 không được thay thế khám cơ xương khớp của A10.
-        A10 không suy ngược khám cơ xương khớp từ output đã render.
-
-A10.4. Quy tắc CREATE / UPDATE / REUSE A10_STATE
-    A10.4.1. CREATE A10_STATE
-        CREATE là trạng thái xử lý nội bộ của A10, áp dụng khi chưa có A10_STATE hiện hành.
-        A10 tạo A10_STATE mới từ user input của ROUND hiện tại và dependency hợp lệ được phép nếu cần.
-        A10 phải xác định:
-            1. STATE_VERSION nếu hệ thống đang dùng.
-            2. UPDATED_AT.
-            3. A10_REV = 1 nếu hệ thống đang dùng revision.
-            4. A10_HAS_DATA.
-            5. A10_FOR_O1.
-            6. A10_FOR_O8.
-            7. A10_CHECK.
-            8. A10_ERROR nếu cần.
-
-    A10.4.2. UPDATE A10_STATE
-        UPDATE là trạng thái xử lý nội bộ của A10, áp dụng khi user input của ROUND hiện tại hoặc dependency hợp lệ A1-A9 làm nội dung thật của A10_HAS_DATA, A10_FOR_O1 hoặc A10_FOR_O8 thay đổi.
-        Dữ liệu có thể ảnh hưởng A10 gồm:
-            1. Đau khớp / đau nhiều khớp / đau khớp di chuyển.
-            2. Sưng / nóng / đỏ / ấn đau khớp.
-            3. Hạn chế vận động khớp.
-            4. Biến dạng khớp.
-            5. Tràn dịch khớp.
-            6. Đau cột sống.
-            7. Đau cột sống khi ấn.
-            8. Co cứng cơ cạnh sống.
-            9. Hạn chế vận động cột sống.
-            10. Đau lan rễ hoặc tê bì theo rễ trong bệnh cảnh đau rễ/cột sống.
-            11. Lasègue.
-            12. Valleix.
-            13. Schober.
-            14. Chẩn đoán/mã bệnh/bệnh cảnh cơ xương khớp trực tiếp từ user input.
-            15. User yêu cầu khám chi tiết cơ xương khớp.
-            16. Dấu khám cơ xương khớp khác.
-        Khi UPDATE:
-            - A10 đọc A10_STATE hiện hành mới nhất nếu có.
-            - A10 thay phần bị ảnh hưởng bằng dữ liệu mới.
-            - A10 giữ phần không bị ảnh hưởng bằng nội dung hiện hành mới nhất nếu không mâu thuẫn rule mới.
-            - A10_STATE sau UPDATE phải mang STATE_VERSION của ROUND hiện tại.
-            - UPDATED_AT phải cập nhật theo thời điểm tạo full current A10_STATE.
-            - Nếu A10_HAS_DATA, A10_FOR_O1 hoặc A10_FOR_O8 thay đổi thật, A10_REV tăng so với A10_REV hiện hành.
-
-    A10.4.3. REUSE A10_STATE
-        REUSE là trạng thái xử lý nội bộ của A10, áp dụng khi đã có A10_STATE hiện hành và input không ảnh hưởng A10 hoặc nội dung thật của A10_HAS_DATA / A10_FOR_O1 / A10_FOR_O8 không thay đổi.
-        Nếu dependency hợp lệ A1-A9 được đọc nhưng không làm A10_HAS_DATA / A10_FOR_O1 / A10_FOR_O8 thay đổi thật, A10 REUSE và A10_REV giữ nguyên.
-        Nếu user input có liên quan nhưng sau chuẩn hóa nội dung thật không đổi, A10 REUSE và A10_REV giữ nguyên.
-        A10 dùng lại nội dung thật của A10_STATE hiện hành mới nhất nếu nội dung đó vẫn đạt rule A10 hiện hành.
-        A10_STATE dùng lại vẫn phải mang STATE_VERSION của ROUND hiện tại khi in trong full current A_STATE.
-        UPDATED_AT là thời điểm in/cập nhật full current A10_STATE, không thay thế A10_REV.
-        Không được ghi “giữ nguyên như trước” thay cho nội dung thật.
-        Không được chỉ ghi “reuse A10” thay cho A10_HAS_DATA, A10_FOR_O1 và A10_FOR_O8.
-
-    A10.4.4. Quy tắc A10_REV
-        A10 chỉ quản lý revision của chính A10.
-        A10 không tự tạo toàn bộ A_MODULE_REV.
-        Nếu CREATE A10_STATE: A10_REV = 1.
-        Nếu UPDATE và A10_HAS_DATA, A10_FOR_O1 hoặc A10_FOR_O8 thay đổi thật: A10_REV tăng so với A10_REV hiện hành.
-        Nếu REUSE hoặc nội dung thật không đổi: A10_REV giữ nguyên.
-        A10_REV tăng hoặc giữ nguyên theo thay đổi thật của A10_HAS_DATA / A10_FOR_O1 / A10_FOR_O8; không theo tên RUN_MODE.
-        A10_REV là metadata kỹ thuật để A_GATE/full current A_STATE tổng hợp vào A_MODULE_REV.
-        UPDATED_AT là metadata quản lý thời điểm cập nhật state, không phải dữ liệu bệnh án và không được O render.
-        A10_STATE vẫn là full state, không phải patch/delta.
-
-A10.5. Quy tắc A10_HAS_DATA và RUN_MODE
-    A10.5.1. Logic A10_HAS_DATA
-        Nếu có bất kỳ dữ liệu sau, A10_HAS_DATA = YES:
-            1. Triệu chứng cơ xương khớp hiện tại từ user input hoặc nguồn hợp lệ trước A10.
-            2. Chẩn đoán/mã bệnh/bệnh cảnh cơ xương khớp user-provided.
-            3. Dữ kiện khám cơ xương khớp.
-            4. User yêu cầu khám chi tiết cơ xương khớp.
-        Khi A10_HAS_DATA = YES:
-            - A10_FOR_O1 phải có nội dung khám thực thể phù hợp.
-            - A10_FOR_O8 phải có nội dung khám thực thể phù hợp.
-        Nếu không có triệu chứng cơ xương khớp, không có chẩn đoán/mã bệnh/bệnh cảnh cơ xương khớp user-provided, không có dữ kiện bất thường cơ xương khớp và không có yêu cầu khám chi tiết cơ xương khớp, A10_HAS_DATA = NO.
-        Khi A10_HAS_DATA = NO:
-            - A10_FOR_O1 = Không xuất dòng Cơ xương khớp trong O1.
-            - A10_FOR_O8 = Không xuất phần cơ xương khớp trong O8.
-            - O không render dòng/phần Cơ xương khớp.
-        Không tự thêm dòng cơ xương khớp ổn định.
-        Không ghi cụm output mơ hồ về không có bất thường cơ xương khớp.
-        Không ghi các khớp không sưng nóng đỏ đau, vận động trong giới hạn nếu không có dữ liệu cần ghi nhận.
-        Các cơ quan không có vấn đề được xử lý ở A11_OTHER_SYSTEMS.
-
-    A10.5.2. USER_ONLY
-        USER_ONLY là chế độ thủ công.
-        A10 chỉ dùng dữ liệu cơ xương khớp user cung cấp trực tiếp hoặc state hợp lệ trước A10 nếu module cho phép.
-        A10 không tự tạo đau khớp.
-        A10 không tự tạo sưng/nóng/đỏ khớp.
-        A10 không tự tạo hạn chế vận động khớp.
-        A10 không tự tạo đau cột sống.
-        A10 không tự tạo đau lan rễ.
-        A10 không tự tạo Lasègue (+).
-        A10 không tự tạo Valleix (+).
-        A10 không tự tạo Schober bất thường.
-        Nếu không có dữ liệu cơ xương khớp cần ghi nhận:
-            - A10_HAS_DATA = NO.
-            - A10_FOR_O1 = Không xuất dòng Cơ xương khớp trong O1.
-            - A10_FOR_O8 = Không xuất phần cơ xương khớp trong O8.
-            - A10_CHECK = PASS.
-            - A10_ERROR = NONE.
-        Chỉ đặt A10_CHECK = NEEDS_FIX khi có bệnh cảnh/yêu cầu cơ xương khớp cần xử lý nhưng thiếu dữ kiện tối thiểu và RUN_MODE không cho phép tự hoàn thiện.
-        A10 không đọc O_OUTPUT để quyết định dữ kiện khám cơ xương khớp có bắt buộc hay không.
-        A10 không tự suy “output đang chạy” từ O.
-
-    A10.5.3. DEFAULT_COMPLETION
-        DEFAULT_COMPLETION là chế độ bán thủ công.
-        A10 dùng dữ liệu user cung cấp làm nền.
-        A10 được tự tạo khám cơ xương khớp phù hợp bệnh cảnh nếu user không cung cấp đủ khám cơ xương khớp.
-        Nếu không có dữ liệu cơ xương khớp cần ghi nhận, A10_HAS_DATA = NO và không xuất dòng/phần Cơ xương khớp.
-        Nếu có lý do vào viện, tiền sử, bệnh sử hoặc triệu chứng cơ xương khớp liên quan trong A1/A2/A3:
-            - A10 được chọn mẫu khám cơ xương khớp phù hợp, miễn là không mâu thuẫn dữ kiện user.
-        Nếu có chẩn đoán, mã bệnh hoặc bệnh cảnh cơ xương khớp trực tiếp trong user input:
-            - A10 được chọn mẫu khám phù hợp, miễn là không mâu thuẫn dữ kiện user.
-        Với ca đau cổ vai cánh tay kèm đau khớp gối hai bên, fallback hợp lệ ưu tiên:
-            - A10_FOR_O1 = Vùng cổ vai cánh tay đau khi vận động, vận động cổ giảm. Khớp gối hai bên đau khi vận động, lạo xạo xương (+).
-            - A10_FOR_O8 = Vùng cổ vai cánh tay đau khi vận động, vận động cổ giảm, co cứng cơ cạnh sống cổ nếu có căn cứ. Khớp gối hai bên đau khi vận động, vận động khớp gối đau tăng, lạo xạo xương (+) nếu có căn cứ.
-        Không bắt buộc ghi co cứng cơ cạnh sống cổ nếu user không cung cấp hoặc bệnh cảnh không đủ căn cứ.
-        Không bắt buộc ghi lạo xạo xương (+) nếu user chỉ cung cấp đau khớp gối và không có bệnh cảnh thoái hóa hoặc dữ kiện khám phù hợp.
-        Nếu user phủ định đau khớp, sưng khớp, đau cột sống, đau lan rễ hoặc hạn chế vận động:
-            - A10 phải giữ đúng phủ định.
-            - Không tự viết ngược lại.
-        Không tự tạo dấu cơ xương khớp nặng nếu không có căn cứ.
-        Không tự tạo biến dạng khớp, tràn dịch khớp, teo cơ, hạn chế vận động nặng, dấu chèn ép thần kinh nặng hoặc nghiệm pháp (+) nếu không có căn cứ.
-        Không tự thêm cụm âm tính thường quy dài nếu user không cung cấp hoặc bệnh cảnh không cần mô tả để phân biệt.
-        Trong DEFAULT_COMPLETION bệnh án thường quy, A10_FOR_O1/A10_FOR_O8 không được chứa no-data placeholder và không được làm mất triệu chứng cơ xương khớp chính user cung cấp.
-
-    A10.5.4. AUTO_SAMPLE
-        AUTO_SAMPLE là chế độ tự động / tạo mẫu.
-        A10 được tạo khám cơ xương khớp mẫu phù hợp bệnh cảnh mẫu.
-        Khám cơ xương khớp mẫu chỉ cần nhất quán với user input và dependency hợp lệ A1-A9 nếu các dữ kiện đó được phép đọc.
-        A10 không đọc A11-A15 hoặc A12_STATE của ROUND hiện tại để viết ngược A10.
-        Mọi đối chiếu với module chạy sau, nếu cần, sẽ do tầng tổng hợp/A_GATE hoặc module chạy sau xử lý sau khi các state đó đã có.
-        Nếu ca mẫu không có dữ liệu cơ xương khớp cần ghi nhận, A10_HAS_DATA = NO và không xuất dòng/phần Cơ xương khớp.
-        Nếu bệnh cảnh mẫu có gout, viêm khớp, thoái hóa khớp, đau cột sống, thoát vị đĩa đệm, hội chứng thắt lưng hông, đau thần kinh tọa hoặc bệnh cơ xương khớp khác:
-            - A10_HAS_DATA = YES.
-            - A10 phải tạo dữ kiện khám cơ xương khớp phù hợp bệnh cảnh mẫu.
-        Không dùng logic AUTO_SAMPLE cho ca bệnh thật nếu user đã cung cấp dữ liệu ca bệnh thật.
-
-A10.6. Phạm vi khám cơ xương khớp
-    A10.6.1. Thành phần thuộc A10
-        A10 xử lý:
-            1. Khám khớp.
-            2. Đau khớp đã chuyển thành dấu khám phù hợp.
-            3. Đau nhiều khớp đã chuyển thành dấu khám từng khớp.
-            4. Đau khớp di chuyển đã chuyển thành dấu khám khớp liên quan.
-            5. Cứng khớp nếu user cung cấp hoặc bệnh cảnh đủ căn cứ.
-            6. Sưng khớp.
-            7. Nóng khớp.
-            8. Đỏ khớp.
-            9. Ấn đau khớp.
-            10. Hạn chế vận động khớp.
-            11. Biến dạng khớp nếu user cung cấp hoặc có căn cứ rõ.
-            12. Tràn dịch khớp nếu user cung cấp hoặc có căn cứ rõ.
-            13. Teo cơ nếu user cung cấp.
-            14. Đau cột sống cổ / ngực / thắt lưng đã chuyển thành khám cột sống.
-            15. Đau cột sống khi ấn.
-            16. Co cứng cơ cạnh sống.
-            17. Hạn chế vận động cột sống.
-            18. Đau lan theo rễ.
-            19. Tê bì theo rễ trong bệnh cảnh đau rễ/cột sống và không có dấu thần kinh khu trú trung ương.
-            20. Lasègue.
-            21. Valleix.
-            22. Schober.
-            23. Đau phần mềm / điểm đau gân cơ nếu user cung cấp.
-            24. Dấu khám cơ xương khớp khác nếu user cung cấp.
-
-    A10.6.2. Thành phần không thuộc A10
-        A10 không xử lý:
-            1. Ý thức, tiếp xúc, thể trạng.
-            2. Sốt, phù toàn thân, da niêm mạc toàn thân.
-            3. Mạch, huyết áp, tiếng tim, tuần hoàn.
-            4. Hô hấp.
-            5. Tiêu hóa.
-            6. Thận - tiết niệu.
-            7. Dấu hiệu thần kinh khu trú trung ương.
-            8. Cơ lực nếu là khám thần kinh trung ương.
-            9. Phản xạ gân xương nếu là khám thần kinh trung ương.
-            10. Dấu bó tháp.
-            11. Rối loạn cơ tròn nếu thuộc thần kinh.
-            12. Hội chứng màng não.
-            13. Tổn thương da khu trú, mắt, tai mũi họng, răng hàm mặt hoặc cơ quan khác.
-            14. X-quang, siêu âm khớp, CT, MRI, xét nghiệm.
-            15. Chẩn đoán do A12 tạo.
-            16. Hướng điều trị hoặc thuốc.
-
-    A10.6.3. Phân ranh với A1-A8
-        A10 không viết lý do vào viện thay A1.
-        A10 không viết tiền sử thay A2.
-        A10 không viết lại bệnh sử dài hoặc triệu chứng cơ năng thay A3.
-        A10 không viết lại khám toàn thân, tuần hoàn, hô hấp, tiêu hóa hoặc thận - tiết niệu thay A4-A8.
-        A10 chỉ dùng A1-A8 để đồng bộ bệnh cảnh nếu cần và nếu nguồn đó hợp lệ trước A10.
-
-    A10.6.4. Phân ranh với A9
-        A9 xử lý dấu hiệu thần kinh khu trú trung ương.
-        A10 xử lý dấu hiệu cơ xương khớp, đau cột sống, đau khớp, đau lan rễ, Lasègue, điểm Valleix, Schober và co cứng cơ cạnh sống.
-        Không chuyển các dữ kiện sau thành dấu hiệu thần kinh khu trú ở A9:
-            1. Đau thắt lưng lan chân.
-            2. Đau cổ vai gáy lan tay.
-            3. Tê bì theo rễ trong bệnh cảnh đau rễ/cột sống.
-            4. Lasègue (+).
-            5. Điểm Valleix đau.
-            6. Co cứng cơ cạnh sống.
-        Nếu có yếu liệt rõ, rối loạn cơ tròn, giảm cảm giác rõ hoặc dấu thần kinh nặng:
-            - A9 ghi bất thường thần kinh theo dữ kiện.
-            - A10 vẫn ghi khám cơ xương khớp nếu có dữ kiện trong phạm vi A10.
-        Không dùng A10 để ghi cơ lực, phản xạ gân xương, dấu bó tháp hoặc hội chứng màng não nếu đó là khám thần kinh trung ương.
-        Không dùng A9 để thay thế khám cột sống / khớp / dấu rễ cơ xương khớp.
-        A10 không sửa A9_STATE.
-
-    A10.6.5. Phân ranh với A11-A15, C và O
-        A10 không viết khám cơ quan khác thay A11.
-        A10 không viết chẩn đoán thay A12.
-        A10 không viết hướng xử trí thay A13.
-        A10 không viết cận lâm sàng/hành chính thay A14.
-        A10 không viết thuốc hoặc đơn thuốc thay A15.
-        A10 không chạy C.
-        A10 không render O.
-
-A10.7. Nguyên tắc khám cơ xương khớp theo trình tự
-    A10.7.1. Trình tự A10_FOR_O8
-        A10_FOR_O8 phải ưu tiên trình tự:
-            1. Nhìn: sưng, đỏ, biến dạng, lệch trục, teo cơ, dáng đi nếu có.
-            2. Sờ: nóng, ấn đau, điểm đau, tràn dịch khớp nếu có, co cứng cơ nếu có.
-            3. Đánh giá: tầm vận động nếu có, lạo xạo xương nếu phù hợp, bập bềnh xương bánh chè nếu nghi tràn dịch, nghiệm pháp dây chằng/sụn chêm/rễ thần kinh nếu phù hợp.
-            4. Vận động: vận động chủ động, vận động thụ động, vận động đau tăng, hạn chế vận động.
-            5. Nghiệm pháp: chỉ dùng nghiệm pháp phù hợp vị trí tổn thương và bệnh cảnh.
-        Không liệt kê tràn lan tất cả nghiệm pháp trong mọi ca.
-        Không tự ghi nghiệm pháp (+) nếu không có căn cứ.
-
-    A10.7.2. Wording khám ưu tiên
-        Ưu tiên cách viết khám:
-            1. Khớp [vị trí] sưng / nóng / đỏ / đau.
-            2. Ấn đau [vị trí].
-            3. Vận động đau tăng.
-            4. Vận động chủ động hạn chế do đau.
-            5. Vận động thụ động còn bảo tồn hoặc hạn chế do đau.
-            6. Nghiệm pháp [tên] (-)/(+) nếu có căn cứ.
-        Không ghi “bệnh nhân đau...” kiểu bệnh sử.
-        Không để output bắt đầu bằng “Đau khớp...”, “Đau cột sống...” hoặc “Đau vùng...” nếu chưa chuyển thành dấu khám.
-        Với vùng tổn thương, ưu tiên style khám: Vùng [vị trí] đau khi vận động.
-        Với dấu lạo xạo xương, dùng `lạo xạo xương (+)` khi có căn cứ; không dùng “dấu hiệu lạo xạo xương dương tính”.
-        Không dùng cụm output mơ hồ dạng không phát hiện bất thường.
-
-A10.8. Quy tắc đau khớp và viêm khớp
-    A10.8.1. Đau khớp / đau nhiều khớp / đau khớp di chuyển
-        Nếu user cung cấp đau khớp, A10 phải ghi rõ vị trí khớp đau trong dấu khám.
-        Nếu user cung cấp đau nhiều khớp, A10 phải ghi các khớp liên quan nếu có.
-        Nếu user cung cấp đau khớp di chuyển, A10 phải chuyển thành dấu khám khớp liên quan, không bê nguyên mô tả bệnh sử vào output.
-        Nếu user cung cấp đau tăng khi vận động, A10 phải ghi vận động đau tăng.
-        Nếu user cung cấp hạn chế vận động khớp, A10 phải ghi hạn chế vận động.
-        Không ghi vận động trong giới hạn nếu user cung cấp hạn chế vận động.
-
-    A10.8.2. Sưng / nóng / đỏ / đau khớp
-        Nếu user cung cấp sưng khớp, A10 phải ghi sưng khớp.
-        Nếu user cung cấp nóng hoặc đỏ khớp, A10 phải ghi đúng.
-        Nếu user cung cấp sưng nóng đỏ đau, A10 phải ghi đúng khớp và không được ghi khớp đó không sưng/không nóng/không đỏ.
-        Nếu user chỉ cung cấp đau khớp khi vận động, A10 không tự tạo sưng nóng đỏ nếu không có căn cứ.
-        Không tự tạo viêm khớp cấp nếu không có căn cứ.
-
-    A10.8.3. Biến dạng / tràn dịch / cứng khớp
-        Không tự tạo biến dạng khớp nếu user không cung cấp và bệnh cảnh không gợi ý.
-        Không tự tạo tràn dịch khớp nếu user không cung cấp và bệnh cảnh không gợi ý.
-        Không tự tạo cứng khớp buổi sáng nếu user không cung cấp và bệnh cảnh không gợi ý.
-        Nếu user cung cấp biến dạng, tràn dịch hoặc cứng khớp, A10 phải ghi đúng vị trí, bên và mức độ nếu có.
-
-A10.9. Tự bổ sung khám và xử lý triệu chứng từ A3
-    A10.9.1. Nguyên tắc tự bổ sung
-        Khi RUN_MODE cho phép tự hoàn thiện, A10 được tạo khám cơ xương khớp phù hợp từ triệu chứng/chẩn đoán/bệnh cảnh cơ xương khớp user-provided hoặc nguồn hợp lệ trước A10.
-        Khám tự bổ sung phải:
-            1. Phù hợp triệu chứng cơ xương khớp.
-            2. Phù hợp chẩn đoán/mã bệnh nếu user-provided.
-            3. Không trái dữ kiện user cung cấp.
-            4. Không trái phủ định rõ của user.
-            5. Không tạo dấu hiệu nặng nếu không có căn cứ.
-        Nếu user chỉ cung cấp đau cột sống, A10 không tự tạo Lasègue (+) nếu không có đau lan rễ hoặc bệnh cảnh rễ thần kinh phù hợp.
-        Không tự tạo dấu chèn ép thần kinh nặng nếu không có căn cứ.
-
-    A10.9.2. Mapping từ A3 sang khám A10
-        A10 dùng triệu chứng cơ xương khớp trong A3 để định hướng khám, không bê nguyên vào output.
-        Nếu A3 có đau khớp vai:
-            - A10 tạo khám khớp vai phù hợp.
-            - Có thể ghi ấn đau quanh khớp vai nếu phù hợp.
-            - Có thể ghi đau khi vận động, hạn chế dạng/xoay nếu phù hợp.
-        Nếu A3 có đau khớp gối:
-            - A10 tạo khám khớp gối phù hợp.
-            - Có thể ghi ấn đau khe khớp nếu phù hợp.
-            - Có thể ghi đau khi vận động, hạn chế gấp duỗi nếu cần.
-        Nếu A3 có đau cổ chân, cổ tay, bàn ngón tay hoặc bàn ngón chân:
-            - A10 tạo khám khớp tương ứng.
-            - Ghi sưng nóng đỏ đau nếu có căn cứ.
-            - Ghi vận động đau tăng nếu phù hợp.
-        Nếu A3 có đau nhiều khớp:
-            - A10 tạo khám các khớp liên quan.
-            - Ưu tiên khớp user nêu rõ hoặc khớp chính gây hạn chế.
-        Nếu A3 có đau cột sống thắt lưng:
-            - A10 tạo khám cột sống thắt lưng.
-            - Có thể ghi ấn gai sau/điểm cạnh sống, vận động cột sống, Schober nếu phù hợp.
-        Nếu A3 có đau cột sống thắt lưng lan mông/đùi/chân:
-            - A10 tạo thêm Lasègue và Valleix nếu phù hợp.
-        Nếu A3 có tê bì theo rễ nhưng không có dấu thần kinh khu trú trung ương:
-            - A10 xử lý theo bệnh cảnh đau rễ/cột sống nếu có.
-            - A9 vẫn xử lý dấu thần kinh trung ương/khách quan nếu có.
-
-A10.10. Khám khớp theo vị trí
-    A10.10.1. Khám khớp vai
-        Khi có dữ kiện khớp vai, A10 phải ghi rõ bên tổn thương: vai phải, vai trái hoặc hai vai.
-        Thành phần cần ghi khi phù hợp:
-            1. Đau khi vận động.
-            2. Ấn đau quanh khớp vai nếu phù hợp.
-            3. Vận động chủ động hạn chế do đau.
-            4. Dạng/khép/xoay vai đau hoặc hạn chế nếu phù hợp.
-            5. Sưng/nóng/đỏ, biến dạng hoặc vận động thụ động chỉ ghi khi user cung cấp hoặc bệnh cảnh cần mô tả rõ.
-        Không tự tạo trật khớp, biến dạng, teo cơ hoặc hạn chế nặng nếu không có căn cứ.
-        Không tự thêm mặc định các cụm âm tính như không sưng nóng đỏ, không biến dạng khớp hoặc vận động thụ động còn bảo tồn.
-        Nếu user chỉ ghi đau vai, A10 có thể ghi đau khi vận động và vận động chủ động hạn chế do đau.
-        Nếu user ghi sưng nóng đỏ đau khớp vai, A10 phải ghi dấu viêm khớp vai.
-        Mẫu A10_FOR_O1 đau vai:
-            Khớp vai [bên] đau khi vận động, vận động chủ động hạn chế do đau.
-        Mẫu A10_FOR_O8 đau vai:
-            Khớp vai [bên] đau khi vận động, ấn đau quanh khớp vai, vận động chủ động hạn chế do đau.
-        Mẫu viêm khớp vai rõ:
-            Khớp vai [bên] sưng nóng đỏ đau, vận động đau tăng, vận động chủ động hạn chế do đau.
-
-    A10.10.2. Khám khớp gối
-        Khi có dữ kiện khớp gối, A10 phải ghi rõ bên tổn thương: gối phải, gối trái hoặc hai gối.
-        Thành phần cần ghi khi phù hợp:
-            1. Sưng/nóng/đỏ/đau.
-            2. Biến dạng khớp nếu user cung cấp hoặc có căn cứ rõ.
-            3. Ấn đau khe khớp.
-            4. Lạo xạo xương (+) nếu có căn cứ.
-            5. Bập bềnh xương bánh chè nếu nghi tràn dịch và có căn cứ.
-            6. Vận động gấp duỗi.
-            7. Vận động đau tăng.
-        Không tự tạo tràn dịch khớp gối hoặc biến dạng khớp nếu không có căn cứ.
-        Không tự thêm mặc định các cụm âm tính như không sưng nóng đỏ hoặc không biến dạng khớp nếu user không cung cấp hoặc bệnh cảnh không cần mô tả.
-        Nếu thoái hóa khớp gối, ưu tiên ấn đau khe khớp, lạo xạo xương (+) khi có căn cứ, hạn chế vận động do đau.
-        Nếu viêm khớp gối cấp, ưu tiên sưng nóng đỏ đau và hạn chế vận động do đau.
-        Mẫu A10_FOR_O1 thoái hóa/đau gối:
-            Khớp gối [bên] đau khi vận động, ấn đau khe khớp, vận động gấp duỗi đau tăng.
-        Mẫu A10_FOR_O8 thoái hóa/đau gối:
-            Khớp gối [bên] đau khi vận động, ấn đau khe khớp, vận động gấp duỗi đau tăng, vận động chủ động hạn chế do đau, lạo xạo xương (+) nếu có căn cứ.
-        Mẫu viêm khớp gối:
-            Khớp gối [bên] sưng nóng đỏ đau, vận động đau tăng, vận động chủ động hạn chế do đau.
-
-    A10.10.3. Viêm nhiều khớp
-        Khi có viêm nhiều khớp, A10 phải ghi các khớp chính bị tổn thương.
-        Ưu tiên:
-            1. Khớp đang sưng nóng đỏ đau.
-            2. Khớp đau nhiều nhất.
-            3. Khớp gây hạn chế vận động chính.
-            4. Khớp user nêu rõ trong khám.
-        Không bê nguyên đau khớp di chuyển vào output nếu không chuyển thành dấu khám từng khớp.
-        Nếu user cung cấp khớp sưng nóng đỏ đau, A10 phải ghi đúng khớp.
-        Nếu user chỉ cung cấp đau nhiều khớp trong bệnh sử, A10 có thể ghi đau khi vận động ở các khớp chính, không tự tạo sưng nóng đỏ hoặc biến dạng nếu không có căn cứ.
-        Nếu user cung cấp khớp vai phải đau nhiều hơn, A10 ưu tiên ghi vai phải đau nhiều hơn/hạn chế hơn nếu phù hợp khám.
-        Không bỏ sót khớp user đã ghi rõ là sưng, nóng, đỏ, đau.
-        Mẫu A10_FOR_O1:
-            Khớp [vị trí chính] sưng nóng đỏ đau, vận động đau tăng; khớp [vị trí khác] đau khi vận động.
-        Mẫu A10_FOR_O8:
-            Khớp [vị trí chính] sưng nóng đỏ đau, vận động đau tăng, vận động chủ động hạn chế do đau; khớp [vị trí khác] đau khi vận động.
-        Không tự thêm không biến dạng khớp hoặc vận động thụ động hạn chế nếu user không cung cấp hoặc không có căn cứ.
-
-    A10.10.4. Các khớp khác
-        Với khuỷu, cổ tay, bàn ngón tay, cổ chân, bàn ngón chân:
-            1. Ghi vị trí khớp.
-            2. Ghi sưng nóng đỏ đau nếu user cung cấp hoặc bệnh cảnh đủ căn cứ.
-            3. Ghi biến dạng nếu user cung cấp hoặc có căn cứ.
-            4. Ghi vận động đau tăng.
-            5. Ghi vận động chủ động, và vận động thụ động chỉ khi cần mô tả rõ.
-            6. Ghi hạn chế vận động nếu có.
-        Không tự tạo sưng nóng đỏ nếu user chỉ ghi đau khớp đơn thuần.
-        Không tự tạo biến dạng nếu không có căn cứ.
-        Không tự thêm mặc định các cụm âm tính về sưng nóng đỏ, biến dạng hoặc vận động thụ động còn bảo tồn.
-        Không bỏ sót khớp user ghi rõ là sưng nóng đỏ đau.
-        Mẫu A10_FOR_O1:
-            Khớp [vị trí] đau khi vận động, vận động chủ động hạn chế do đau.
-        Mẫu A10_FOR_O8:
-            Khớp [vị trí] đau khi vận động, vận động chủ động hạn chế do đau.
-        Mẫu viêm khớp rõ:
-            Khớp [vị trí] sưng nóng đỏ đau, vận động đau tăng, vận động chủ động hạn chế do đau.
-
-A10.11. Cột sống thắt lưng / hội chứng thắt lưng hông
-    A10.11.1. Nguyên tắc khám cột sống thắt lưng
-        Khi có đau cột sống thắt lưng, A10 phải ghi khám thực thể cột sống thắt lưng.
-        Không ghi nguyên văn mô tả bệnh sử nếu chưa chuyển thành dấu khám.
-        Thành phần cần ghi khi phù hợp:
-            1. Tư thế chống đau nếu có.
-            2. Ấn đau gai sau / điểm cạnh sống thắt lưng.
-            3. Co cứng cơ cạnh sống.
-            4. Vận động cúi/ngửa/nghiêng/xoay hạn chế hoặc đau tăng.
-            5. Nghiệm pháp Schober.
-            6. Nghiệm pháp Lasègue.
-            7. Điểm Valleix.
-
-    A10.11.2. Đau thắt lưng không lan rễ
-        Nếu chỉ có đau thắt lưng không lan rễ:
-            - Không tự tạo Lasègue (+).
-            - Có thể ghi Lasègue hai bên (-) nếu cần loại trừ dấu rễ, RUN_MODE cho phép và không mâu thuẫn user input.
-            - Không tự thêm mặc định Cột sống thắt lưng không biến dạng, co cứng cơ cạnh sống mức độ nhẹ hoặc điểm Valleix hai bên không đau nếu user không cung cấp hoặc bệnh cảnh không đủ căn cứ.
-        Mẫu A10_FOR_O1:
-            Ấn đau điểm cạnh sống thắt lưng, vận động cột sống thắt lưng đau tăng, Lasègue hai bên (-).
-        Mẫu A10_FOR_O8:
-            Ấn đau điểm cạnh sống thắt lưng, vận động cúi, ngửa, nghiêng, xoay cột sống thắt lưng đau tăng, Lasègue hai bên (-).
-
-    A10.11.3. Hội chứng thắt lưng hông / đau lan rễ
-        Nếu có đau lan xuống mông/mặt sau đùi/cẳng chân theo rễ:
-            - A10 có thể ghi Lasègue (+) và điểm Valleix đau nếu phù hợp.
-        Nếu user cung cấp Lasègue (+), phải ghi đúng bên.
-        Nếu user cung cấp Lasègue (-), không được ghi Lasègue (+).
-        Nếu user cung cấp điểm Valleix đau, phải ghi đúng bên.
-        Nếu có yếu liệt, rối loạn cơ tròn hoặc giảm cảm giác rõ:
-            - A9 xử lý bất thường thần kinh tương ứng.
-            - A10 vẫn ghi khám cột sống / dấu rễ nếu có.
-        Mẫu A10_FOR_O1:
-            Ấn đau điểm cạnh sống thắt lưng, vận động cột sống thắt lưng hạn chế do đau, Lasègue [bên] (+), điểm Valleix [bên] đau.
-        Mẫu A10_FOR_O8:
-            Ấn đau điểm cạnh sống thắt lưng, vận động cúi, ngửa, nghiêng, xoay cột sống thắt lưng hạn chế do đau, Lasègue [bên] (+), điểm Valleix [bên] đau.
-
-A10.12. Quy tắc chuẩn hóa format (-)/(+)
-    A10.12.1. Rule format
-        Mọi dấu khám dạng có/không theo nghiệm pháp trong A10_FOR_O1, A10_FOR_O8, mẫu và ví dụ output bệnh án phải dùng `(-)/(+)`.
-        Lasègue phải ghi theo dạng Lasègue (-) hoặc Lasègue (+) kèm bên nếu có.
-        Nghiệm pháp khác phải ghi theo dạng nghiệm pháp [tên] (-) hoặc nghiệm pháp [tên] (+) nếu có căn cứ.
-        Không tự ghi nghiệm pháp (+) nếu user không cung cấp và bệnh cảnh không đủ căn cứ.
-        Không dùng chữ diễn giải cũ cho kết quả nghiệm pháp trong output/mẫu/ví dụ.
-        Dấu lạo xạo xương nếu ghi dạng có/không phải dùng `lạo xạo xương (+)` hoặc `lạo xạo xương (-)` khi có căn cứ; không dùng “dấu hiệu lạo xạo xương dương tính”.
-
-    A10.12.2. Rule chống output mơ hồ
-        Không dùng cụm output mơ hồ dạng không phát hiện bất thường trong A10_FOR_O1/O8.
-        Khi A10_HAS_DATA = NO, chỉ dùng đúng câu không xuất.
-        Khi A10_HAS_DATA = YES, phải mô tả dấu khám thực thể cụ thể.
-
-A10.13. Quy tắc tạo A10_FOR_O1
-    A10.13.1. Vai trò của A10_FOR_O1
-        A10_FOR_O1 là bản khám cơ xương khớp dùng cho O1.
-        A10_FOR_O1 phải ngắn gọn, cụ thể.
-        A10_FOR_O1 chỉ chứa dữ kiện khám cơ xương khớp/cột sống cần cho khám sơ bộ.
-        A10_FOR_O1 không làm O1 bị dài.
-
-    A10.13.2. Khi A10_HAS_DATA = NO
-        A10_FOR_O1 = Không xuất dòng Cơ xương khớp trong O1.
-        O không render dòng Cơ xương khớp trong O1.
-
-    A10.13.3. Khi A10_HAS_DATA = YES
-        A10_FOR_O1 phải có dấu khám chính nếu có.
-        A10_FOR_O1 phải ghi vị trí khớp/cột sống liên quan nếu có.
-        A10_FOR_O1 phải ghi dấu rễ quan trọng nếu có.
-        A10_FOR_O1 chỉ ghi dấu khám chính, không tự thêm cụm âm tính dài nếu user không cung cấp hoặc không có căn cứ.
-        A10_FOR_O1 không làm O1 bị dài.
-        A10_FOR_O1 không chứa cận lâm sàng, chẩn đoán, thuốc hoặc hướng điều trị.
-        A10_FOR_O1 không chứa khám thần kinh trung ương thuộc A9.
-        A10_FOR_O1 không được bê nguyên triệu chứng cơ năng hoặc bệnh sử dài.
-        A10_FOR_O1 không được bắt đầu bằng mô tả bệnh sử nếu chưa chuyển thành dấu khám.
-
-A10.14. Quy tắc tạo A10_FOR_O8
-    A10.14.1. Vai trò của A10_FOR_O8
-        A10_FOR_O8 là bản khám cơ xương khớp dùng cho O8.
-        A10_FOR_O8 đầy đủ hơn A10_FOR_O1.
-        A10_FOR_O8 không thêm dữ kiện ngoài phạm vi A10.
-
-    A10.14.2. Khi A10_HAS_DATA = NO
-        A10_FOR_O8 = Không xuất phần cơ xương khớp trong O8.
-        O không render phần Cơ xương khớp trong O8.
-
-    A10.14.3. Khi A10_HAS_DATA = YES
-        A10_FOR_O8 phải mô tả khám thực thể cơ xương khớp theo trình tự ưu tiên khi có căn cứ, nhưng không lan man và không tự thêm cụm âm tính thừa:
-            1. Nhìn.
-            2. Sờ.
-            3. Đánh giá.
-            4. Vận động.
-            5. Nghiệm pháp.
-        A10_FOR_O8 có thể gồm:
-            1. Vị trí khớp/cột sống.
-            2. Sưng/nóng/đỏ/biến dạng/lệch trục/teo cơ/dáng đi nếu có.
-            3. Ấn đau/điểm đau/tràn dịch/co cứng cơ nếu có.
-            4. Tầm vận động, lạo xạo xương, bập bềnh xương bánh chè nếu phù hợp.
-            5. Vận động chủ động, vận động thụ động nếu cần, vận động đau tăng, hạn chế vận động.
-            6. Lasègue, Valleix, Schober hoặc nghiệm pháp phù hợp nếu có căn cứ.
-        Không tự thêm mặc định: không sưng nóng đỏ, không biến dạng khớp, không có biến dạng khớp, vận động thụ động còn bảo tồn, điểm Valleix hai bên không đau, co cứng cơ cạnh sống mức độ nhẹ hoặc Cột sống thắt lưng không biến dạng.
-        Lasègue hai bên (-) được phép giữ trong mẫu đau thắt lưng không lan rễ nếu RUN_MODE cho phép và không mâu thuẫn user input.
-        A10_FOR_O8 không chứa cận lâm sàng, chẩn đoán, thuốc hoặc hướng điều trị.
-        A10_FOR_O8 không chứa khám thần kinh trung ương thuộc A9.
-        A10_FOR_O8 không được bê nguyên triệu chứng cơ năng hoặc bệnh sử dài.
-
-    A10.14.4. Đồng bộ O1/O8
-        A10_FOR_O1 và A10_FOR_O8 phải đồng bộ:
-            1. A10_HAS_DATA.
-            2. Vị trí khớp/cột sống.
-            3. Bên tổn thương nếu có.
-            4. Dấu viêm khớp nếu có.
-            5. Dấu rễ nếu có.
-            6. Hạn chế vận động nếu có.
-        A10_FOR_O8 có thể chi tiết hơn nhưng không được mâu thuẫn A10_FOR_O1.
-        Nếu A10_FOR_O1 ghi Lasègue phải (+), A10_FOR_O8 cũng phải ghi Lasègue phải (+).
-        Nếu A10_FOR_O1 ghi không sưng nóng đỏ khớp, A10_FOR_O8 không được ghi sưng/nóng/đỏ khớp cùng vị trí.
-
-A10.15. Ví dụ cụ thể
-    A10.15.1. Ví dụ không có dữ liệu cơ xương khớp cần ghi nhận
-        Input:
-            Không ghi triệu chứng cơ xương khớp.
-            Không có chẩn đoán/mã bệnh cơ xương khớp user-provided.
-            Không yêu cầu khám chi tiết cơ xương khớp.
-            RUN_MODE = DEFAULT_COMPLETION.
-        A10_STATE:
-            STATE_VERSION = V1
-            UPDATED_AT = 08:00 04/06/2026
-            A10_REV = 1
-            A10_HAS_DATA = NO
-            A10_FOR_O1 = Không xuất dòng Cơ xương khớp trong O1.
-            A10_FOR_O8 = Không xuất phần cơ xương khớp trong O8.
-            A10_CHECK = PASS
-            A10_ERROR = NONE
-
-    A10.15.2. Ví dụ hội chứng thắt lưng hông
-        Input:
-            Đau thắt lưng lan xuống chân phải, Lasègue phải (+), điểm Valleix phải đau.
-        A10_STATE:
-            STATE_VERSION = V1
-            UPDATED_AT = 08:00 04/06/2026
-            A10_REV = 1
-            A10_HAS_DATA = YES
-            A10_FOR_O1 = Ấn đau điểm cạnh sống thắt lưng, vận động cột sống thắt lưng hạn chế do đau, Lasègue phải (+), điểm Valleix phải đau.
-            A10_FOR_O8 = Ấn đau điểm cạnh sống thắt lưng, vận động cúi, ngửa, nghiêng, xoay cột sống thắt lưng hạn chế do đau, Lasègue phải (+), điểm Valleix phải đau.
-            A10_CHECK = PASS
-            A10_ERROR = NONE
-
-    A10.15.3. Ví dụ đau khớp gối
-        Input:
-            Đau khớp gối hai bên, đi lại đau tăng, không sưng nóng đỏ.
-        A10_STATE:
-            STATE_VERSION = V1
-            UPDATED_AT = 08:00 04/06/2026
-            A10_REV = 1
-            A10_HAS_DATA = YES
-            A10_FOR_O1 = Khớp gối hai bên đau khi vận động, ấn đau khe khớp, vận động gấp duỗi đau tăng.
-            A10_FOR_O8 = Khớp gối hai bên đau khi vận động, ấn đau khe khớp, vận động gấp duỗi đau tăng, vận động chủ động hạn chế do đau.
-            A10_CHECK = PASS
-            A10_ERROR = NONE
-
-    A10.15.4. Ví dụ USER_ONLY không có dữ liệu cơ xương khớp cần ghi nhận
-        Input:
-            RUN_MODE = USER_ONLY.
-            Không có triệu chứng cơ xương khớp, không có chẩn đoán/mã bệnh cơ xương khớp user-provided, không có dữ kiện khám cơ xương khớp.
-        A10_STATE:
-            STATE_VERSION = V1
-            UPDATED_AT = 08:00 04/06/2026
-            A10_REV = 1
-            A10_HAS_DATA = NO
-            A10_FOR_O1 = Không xuất dòng Cơ xương khớp trong O1.
-            A10_FOR_O8 = Không xuất phần cơ xương khớp trong O8.
-            A10_CHECK = PASS
-            A10_ERROR = NONE
-
-    A10.15.5. Ví dụ không kéo dấu thần kinh từ A9
-        Input:
-            A9 có giảm cảm giác khách quan bàn chân phải.
-            A10 không có dữ kiện đau cột sống, đau rễ, Lasègue hoặc khớp.
-        A10_STATE:
-            STATE_VERSION = V1
-            UPDATED_AT = 08:00 04/06/2026
-            A10_REV = 1
-            A10_HAS_DATA = NO
-            A10_FOR_O1 = Không xuất dòng Cơ xương khớp trong O1.
-            A10_FOR_O8 = Không xuất phần cơ xương khớp trong O8.
-            A10_CHECK = PASS
-            A10_ERROR = NONE
-
-    A10.15.6. Ví dụ gout cấp
-        Input:
-            Đau khớp bàn ngón chân cái phải, khớp sưng nóng đỏ, đau nhiều.
-            RUN_MODE = DEFAULT_COMPLETION.
-        A10_STATE:
-            STATE_VERSION = V1
-            UPDATED_AT = 08:00 04/06/2026
-            A10_REV = 1
-            A10_HAS_DATA = YES
-            A10_FOR_O1 = Khớp bàn ngón chân cái phải sưng nóng đỏ đau, vận động đau tăng.
-            A10_FOR_O8 = Khớp bàn ngón chân cái phải sưng nóng đỏ đau, vận động đau tăng, vận động chủ động hạn chế do đau.
-            A10_CHECK = PASS
-            A10_ERROR = NONE
-
-    A10.15.7. Ví dụ đau cột sống nhưng không có dấu rễ
-        Input:
-            Đau cột sống thắt lưng, không đau lan chân, Lasègue hai bên (-).
-            RUN_MODE = DEFAULT_COMPLETION.
-        A10_STATE:
-            STATE_VERSION = V1
-            UPDATED_AT = 08:00 04/06/2026
-            A10_REV = 1
-            A10_HAS_DATA = YES
-            A10_FOR_O1 = Ấn đau điểm cạnh sống thắt lưng, vận động cột sống thắt lưng đau tăng, Lasègue hai bên (-).
-            A10_FOR_O8 = Ấn đau điểm cạnh sống thắt lưng, vận động cúi, ngửa, nghiêng, xoay cột sống thắt lưng đau tăng, Lasègue hai bên (-).
-            A10_CHECK = PASS
-            A10_ERROR = NONE
-
-    A10.15.8. Ví dụ user phủ định cơ xương khớp cần ghi nhận
-        Input:
-            Không đau khớp, không đau cột sống, không yêu cầu khám chi tiết cơ xương khớp.
-            RUN_MODE = DEFAULT_COMPLETION.
-        A10_STATE:
-            STATE_VERSION = V1
-            UPDATED_AT = 08:00 04/06/2026
-            A10_REV = 1
-            A10_HAS_DATA = NO
-            A10_FOR_O1 = Không xuất dòng Cơ xương khớp trong O1.
-            A10_FOR_O8 = Không xuất phần cơ xương khớp trong O8.
-            A10_CHECK = PASS
-            A10_ERROR = NONE
-
-    A10.15.9. Ví dụ UPDATE khi nội dung thật thay đổi
-        A10_STATE hiện hành:
-            STATE_VERSION = V1
-            UPDATED_AT = 08:00 04/06/2026
-            A10_REV = 1
-            A10_HAS_DATA = YES
-            A10_FOR_O1 = Ấn đau điểm cạnh sống thắt lưng, vận động cột sống thắt lưng đau tăng, Lasègue hai bên (-).
-            A10_FOR_O8 = Ấn đau điểm cạnh sống thắt lưng, vận động cúi, ngửa, nghiêng, xoay cột sống thắt lưng đau tăng, Lasègue hai bên (-).
-            A10_CHECK = PASS
-            A10_ERROR = NONE
-        User input ROUND hiện tại:
-            Bổ sung đau thắt lưng lan chân phải, Lasègue phải (+).
-        A10_STATE sau UPDATE:
-            STATE_VERSION = V2
-            UPDATED_AT = 08:30 04/06/2026
-            A10_REV = 2
-            A10_HAS_DATA = YES
-            A10_FOR_O1 = Ấn đau điểm cạnh sống thắt lưng, vận động cột sống thắt lưng hạn chế do đau, Lasègue phải (+), điểm Valleix phải đau.
-            A10_FOR_O8 = Ấn đau điểm cạnh sống thắt lưng, vận động cúi, ngửa, nghiêng, xoay cột sống thắt lưng hạn chế do đau, Lasègue phải (+), điểm Valleix phải đau.
-            A10_CHECK = PASS
-            A10_ERROR = NONE
-
-    A10.15.10. Ví dụ REUSE full A10_STATE
-        A10_STATE hiện hành:
-            STATE_VERSION = V1
-            UPDATED_AT = 08:00 04/06/2026
-            A10_REV = 2
-            A10_HAS_DATA = YES
-            A10_FOR_O1 = Ấn đau điểm cạnh sống thắt lưng, vận động cột sống thắt lưng hạn chế do đau, Lasègue phải (+), điểm Valleix phải đau.
-            A10_FOR_O8 = Ấn đau điểm cạnh sống thắt lưng, vận động cúi, ngửa, nghiêng, xoay cột sống thắt lưng hạn chế do đau, Lasègue phải (+), điểm Valleix phải đau.
-            A10_CHECK = PASS
-            A10_ERROR = NONE
-        User input ROUND hiện tại:
-            Bổ sung dữ kiện không ảnh hưởng A10.
-        A10_STATE sau REUSE:
-            STATE_VERSION = V2
-            UPDATED_AT = 08:30 04/06/2026
-            A10_REV = 2
-            A10_HAS_DATA = YES
-            A10_FOR_O1 = Ấn đau điểm cạnh sống thắt lưng, vận động cột sống thắt lưng hạn chế do đau, Lasègue phải (+), điểm Valleix phải đau.
-            A10_FOR_O8 = Ấn đau điểm cạnh sống thắt lưng, vận động cúi, ngửa, nghiêng, xoay cột sống thắt lưng hạn chế do đau, Lasègue phải (+), điểm Valleix phải đau.
-            A10_CHECK = PASS
-            A10_ERROR = NONE
-
-    A10.15.11. Ví dụ AUTO_SAMPLE không có dữ liệu cơ xương khớp
-        Input:
-            RUN_MODE = AUTO_SAMPLE.
-            Đây là ca mẫu không có dữ liệu cơ xương khớp cần ghi nhận.
-        A10_STATE sau CREATE:
-            STATE_VERSION = V1
-            UPDATED_AT = 08:00 04/06/2026
-            A10_REV = 1
-            A10_HAS_DATA = NO
-            A10_FOR_O1 = Không xuất dòng Cơ xương khớp trong O1.
-            A10_FOR_O8 = Không xuất phần cơ xương khớp trong O8.
-            A10_CHECK = PASS
-            A10_ERROR = NONE
-
-    A10.15.12. Ví dụ khớp vai
-        Input:
-            Đau vai trái khi vận động, không sưng nóng đỏ.
-            RUN_MODE = DEFAULT_COMPLETION.
-        A10_STATE:
-            STATE_VERSION = V1
-            UPDATED_AT = 08:00 04/06/2026
-            A10_REV = 1
-            A10_HAS_DATA = YES
-            A10_FOR_O1 = Khớp vai trái đau khi vận động, vận động chủ động hạn chế do đau.
-            A10_FOR_O8 = Khớp vai trái đau khi vận động, ấn đau quanh khớp vai, vận động chủ động hạn chế do đau.
-            A10_CHECK = PASS
-            A10_ERROR = NONE
-
-    A10.15.13. Ví dụ viêm nhiều khớp
-        Input:
-            Khớp cổ tay phải sưng nóng đỏ đau, khớp gối trái đau khi vận động.
-            RUN_MODE = DEFAULT_COMPLETION.
-        A10_STATE:
-            STATE_VERSION = V1
-            UPDATED_AT = 08:00 04/06/2026
-            A10_REV = 1
-            A10_HAS_DATA = YES
-            A10_FOR_O1 = Khớp cổ tay phải sưng nóng đỏ đau, vận động đau tăng; khớp gối trái đau khi vận động.
-            A10_FOR_O8 = Khớp cổ tay phải sưng nóng đỏ đau, vận động đau tăng, vận động chủ động hạn chế do đau; khớp gối trái đau khi vận động.
-            A10_CHECK = PASS
-            A10_ERROR = NONE
-
-A10.16. Schema A10_STATE
-    A10.16.1. Schema chuẩn
-        A10_STATE:
-            STATE_VERSION = ...
-            UPDATED_AT = HH:MM dd/mm/yyyy
-            A10_REV = ...
-            A10_HAS_DATA = YES / NO
-            A10_FOR_O1 = ...
-            A10_FOR_O8 = ...
-            A10_CHECK = PASS / NEEDS_FIX
-            A10_ERROR = ...
-
-    A10.16.2. Nguyên tắc schema
-        A10_STATE không cần in trạng thái CREATE / UPDATE / REUSE.
-        A10_STATE phải in UPDATED_AT theo định dạng HH:MM dd/mm/yyyy.
-        UPDATED_AT là metadata quản lý thời điểm cập nhật state, không phải dữ liệu bệnh án và không được O render.
-        UPDATED_AT khác A10_REV: UPDATED_AT là thời điểm cập nhật state, A10_REV là revision nội dung theo rule system.
-        A10_STATE phải in A10_REV hiện hành để A_GATE/full current A_STATE tổng hợp vào A_MODULE_REV.
-        A10_STATE là full state, không phải patch/delta.
-        A10_STATE không cần STATUS.
-        A10_STATE phải dùng STATE_VERSION của ROUND hiện tại.
-        A10_HAS_DATA là cờ quyết định O có xuất dòng/phần Cơ xương khớp hay không.
-        A10_FOR_O1 là dữ liệu khám cơ xương khớp dùng cho O1 hoặc câu không xuất khi A10_HAS_DATA = NO.
-        A10_FOR_O8 là dữ liệu khám cơ xương khớp dùng cho O8 hoặc câu không xuất khi A10_HAS_DATA = NO.
-        A10_CHECK là kết quả tự kiểm của A10.
-        A10_ERROR chỉ dùng khi A10_CHECK = NEEDS_FIX.
-
-    A10.16.3. Khi A10_CHECK = PASS
-        Nếu A10_CHECK = PASS:
-            - A10_HAS_DATA có giá trị hợp lệ YES hoặc NO.
-            - A10_FOR_O1 có giá trị hợp lệ theo A10_HAS_DATA.
-            - A10_FOR_O8 có giá trị hợp lệ theo A10_HAS_DATA.
-            - A10_ERROR = NONE.
-
-    A10.16.4. Khi A10_CHECK = NEEDS_FIX
-        Nếu A10_CHECK = NEEDS_FIX:
-            - A10_ERROR phải ghi rõ lỗi.
-            - A10_ERROR phải nêu dữ liệu cần user bổ sung hoặc phần cần sửa.
-            - Không ghi lỗi chung chung nếu xác định được lỗi cụ thể.
-
-A10.17. Lỗi không được mắc
-    A10.17.1. Lỗi sai phạm vi A10
-        Không viết bệnh sử hoặc triệu chứng cơ năng thay A3.
-        Không viết lý do vào viện thay A1.
-        Không viết tiền sử thay A2.
-        Không viết khám toàn thân thay A4.
-        Không viết khám tuần hoàn thay A5.
-        Không viết khám hô hấp thay A6.
-        Không viết khám tiêu hóa thay A7.
-        Không viết khám thận - tiết niệu thay A8.
-        Không viết khám thần kinh trung ương/thần kinh thực thể thay A9 nếu dữ kiện thuộc A9.
-        Không viết khám cơ quan khác thay A11.
-        Không viết chẩn đoán thay A12.
-        Không viết hướng xử trí thay A13.
-        Không viết thuốc hoặc đơn thuốc thay A15.
-        Không viết cận lâm sàng/hành chính thay A14.
-        Không chạy C/O trong A10.
-
-    A10.17.2. Lỗi tự tạo dữ kiện
-        Không tự tạo đau khớp nếu user không cung cấp và bệnh cảnh không đủ căn cứ.
-        Không tự tạo sưng/nóng/đỏ khớp nếu user không cung cấp và bệnh cảnh không đủ căn cứ.
-        Không tự tạo hạn chế vận động nếu user không cung cấp và bệnh cảnh không đủ căn cứ.
-        Không tự tạo Lasègue (+), Valleix đau hoặc Schober bất thường nếu user không cung cấp và bệnh cảnh không đủ căn cứ.
-        Không tự tạo đau lan rễ nếu user không cung cấp và bệnh cảnh không đủ căn cứ.
-        Không tự tạo co cứng cơ cạnh sống nếu user không cung cấp và bệnh cảnh không đủ căn cứ.
-        Không tự tạo biến dạng khớp, tràn dịch khớp hoặc teo cơ nếu user không cung cấp và bệnh cảnh không đủ căn cứ.
-        Không tự tạo dấu chèn ép thần kinh nặng nếu không có căn cứ.
-        Không tự tạo nghiệm pháp (+) nếu không có căn cứ.
-
-    A10.17.3. Lỗi ranh giới với A9
-        Không kéo dấu thần kinh khu trú từ A9 sang A10.
-        Không kéo giảm cảm giác khách quan thuần thần kinh từ A9 sang A10.
-        Không kéo rối loạn cơ tròn từ A9 sang A10.
-        Không biến tê bì/dị cảm đơn thuần thành dấu cơ xương khớp nếu không có dữ kiện đau rễ hoặc khám cơ xương khớp.
-        Không biến Lasègue/Valleix thành dấu thần kinh khu trú trung ương.
-        Không ghi yếu/liệt trong A10 nếu đây là dấu thần kinh thuộc A9.
-
-    A10.17.4. Lỗi mâu thuẫn
-        Nếu A1_REASON có triệu chứng cơ xương khớp chính, A10 không được bỏ sót bệnh cảnh cơ xương khớp khi RUN_MODE cho phép xử lý.
-        Nếu A2_FINAL có tiền sử cơ xương khớp, A10 không được biến tiền sử thành dấu khám hiện tại nếu không có căn cứ.
-        Nếu A3 có đau khớp/đau cột sống/đau lan rễ, A10 không được ghi không xuất khi dữ kiện đó còn cần xử lý.
-        Nếu user phủ định đau khớp, sưng khớp, đau cột sống, đau lan rễ hoặc hạn chế vận động, A10 không được tự ghi ngược lại.
-        Nếu user cung cấp bên đau hoặc bên tổn thương, A10 không được đổi bên.
-        Nếu user không cung cấp bên tổn thương, A10 không tự tạo bên cụ thể nếu không có căn cứ.
-
-    A10.17.5. Lỗi trình bày A10_FOR_O1 / A10_FOR_O8
-        Không để A10_FOR_O1 và A10_FOR_O8 mâu thuẫn.
-        Không để A10_FOR_O1 thiếu dữ kiện chính nếu A10_HAS_DATA = YES và A10_CHECK = PASS.
-        Không để A10_FOR_O8 thiếu dữ kiện cần thiết nếu A10_HAS_DATA = YES và A10_CHECK = PASS.
-        Không viết A10_FOR_O1 quá dài.
-        Không viết A10_FOR_O8 dài nhưng thêm dữ kiện sai phạm vi.
-        Không làm mất bất thường cơ xương khớp user cung cấp.
-        Không dùng cụm output mơ hồ dạng không có bất thường cơ xương khớp.
-        Không dùng chữ diễn giải cũ cho kết quả nghiệm pháp trong output/mẫu/ví dụ.
-        Dấu lạo xạo xương nếu ghi dạng có/không phải dùng `lạo xạo xương (+)` hoặc `lạo xạo xương (-)` khi có căn cứ; không dùng “dấu hiệu lạo xạo xương dương tính”.
-        Không dùng “dấu hiệu lạo xạo xương dương tính”, “Lasègue dương tính” hoặc “Lasègue âm tính” trong output chuẩn; dùng `lạo xạo xương (+)`, `Lasègue (+)` hoặc `Lasègue (-)`.
-        Không để output khám bệnh án bắt đầu bằng mô tả bệnh sử nếu chưa chuyển thành dấu khám, đặc biệt không bắt đầu bằng “Đau vùng...”.
-        Không để A10_FOR_O8 quá dài do tự thêm cụm âm tính thừa khi không có căn cứ.
-
-    A10.17.6. Lỗi vận hành state
-        Không tạo state của A khác.
-        Không dùng patch/delta làm A10_STATE chính thức.
-        Không ghi “giữ nguyên như trước” thay cho nội dung thật.
-        Không đưa metadata không cần thiết vào A10_STATE.
-        Không render O trong A10.
-        Không chạy C trong A10.
-        Không suy ngược A10 từ O_OUTPUT.
-
-A10.18. A10_CHECK
-    A10.18.1. Kiểm A10_FOR_O1
-        Kiểm:
-            1. A10_FOR_O1 hợp lệ theo A10_HAS_DATA.
-            2. Nếu A10_HAS_DATA = NO, A10_FOR_O1 đúng bằng: Không xuất dòng Cơ xương khớp trong O1.
-            3. Nếu A10_HAS_DATA = YES, A10_FOR_O1 ngắn gọn và có nội dung khám thực thể phù hợp.
-            4. Nếu A10_HAS_DATA = YES, A10_FOR_O1 có vị trí khớp/cột sống liên quan nếu có.
-            5. Nếu A10_HAS_DATA = YES, A10_FOR_O1 có dấu khám khớp/cột sống/dấu rễ quan trọng nếu có.
-            6. A10_FOR_O1 không chứa cận lâm sàng.
-            7. A10_FOR_O1 không chứa chẩn đoán/thuốc/hướng điều trị.
-            8. A10_FOR_O1 không kéo dữ kiện thần kinh trung ương từ A9.
-            9. A10_FOR_O1 không mâu thuẫn với user input.
-            10. A10_FOR_O1 không mâu thuẫn với A1-A9 nếu có dùng dependency.
-            11. A10_FOR_O1 không chứa triệu chứng cơ năng nguyên văn.
-            12. A10_FOR_O1 không dùng cụm output mơ hồ dạng không có bất thường cơ xương khớp.
-            13. A10_FOR_O1 không dùng chữ diễn giải cũ cho kết quả nghiệm pháp.
-            14. Nghiệm pháp trong A10_FOR_O1 dùng `(-)/(+)`.
-            15. A10_FOR_O1 không tự thêm cụm âm tính thừa nếu không có căn cứ.
-            16. A10_FOR_O1 không bắt đầu bằng “Đau vùng...” nếu chưa chuyển thành dấu khám.
-
-    A10.18.2. Kiểm A10_FOR_O8
-        Kiểm:
-            1. A10_FOR_O8 hợp lệ theo A10_HAS_DATA.
-            2. Nếu A10_HAS_DATA = NO, A10_FOR_O8 đúng bằng: Không xuất phần cơ xương khớp trong O8.
-            3. Nếu A10_HAS_DATA = YES, A10_FOR_O8 đầy đủ hơn A10_FOR_O1.
-            4. Nếu A10_HAS_DATA = YES, A10_FOR_O8 ưu tiên trình tự nhìn - sờ - đánh giá - vận động - nghiệm pháp.
-            5. A10_FOR_O8 giữ đúng sưng/nóng/đỏ/ấn đau/hạn chế vận động nếu user cung cấp.
-            6. A10_FOR_O8 giữ đúng Lasègue/Valleix/Schober nếu user cung cấp.
-            7. A10_FOR_O8 không chứa cận lâm sàng.
-            8. A10_FOR_O8 không chứa chẩn đoán/thuốc/hướng điều trị.
-            9. A10_FOR_O8 không kéo dữ kiện thần kinh trung ương từ A9.
-            10. A10_FOR_O8 không mâu thuẫn với A10_FOR_O1.
-            11. A10_FOR_O8 không mâu thuẫn với user input.
-            12. A10_FOR_O8 không mâu thuẫn với A1-A9 nếu có dùng dependency.
-            13. A10_FOR_O8 không chứa triệu chứng cơ năng nguyên văn.
-            14. A10_FOR_O8 không dùng cụm output mơ hồ dạng không có bất thường cơ xương khớp.
-            15. A10_FOR_O8 không dùng chữ diễn giải cũ cho kết quả nghiệm pháp.
-            16. Nghiệm pháp trong A10_FOR_O8 dùng `(-)/(+)`.
-            17. A10_FOR_O8 không tự tạo nghiệm pháp (+), dấu nặng, biến dạng, tràn dịch, teo cơ hoặc hạn chế vận động nặng nếu không có căn cứ.
-            18. A10_FOR_O8 không tự thêm cụm âm tính thừa nếu không có căn cứ.
-            19. A10_FOR_O8 không bắt đầu bằng “Đau vùng...” nếu chưa chuyển thành dấu khám.
-            20. A10_FOR_O8 không dùng “dấu hiệu lạo xạo xương dương tính”, “Lasègue dương tính” hoặc “Lasègue âm tính”.
-
-    A10.18.3. Kiểm dependency và đồng bộ
-        Kiểm:
-            1. Nếu dùng A1_STATE, A10 không bỏ sót lý do vào viện liên quan cơ xương khớp.
-            2. Nếu dùng A2_STATE, A10 không biến tiền sử cơ xương khớp thành dấu khám hiện tại nếu không có căn cứ.
-            3. Nếu dùng A3_STATE, A10 dùng triệu chứng cơ xương khớp để định hướng khám nhưng không viết lại toàn bộ bệnh sử.
-            4. Nếu dùng A4-A8, A10 chỉ đồng bộ bệnh cảnh, không tạo dấu cơ xương khớp nếu không có căn cứ.
-            5. Nếu dùng A9_STATE, A10 phân ranh đúng thần kinh trung ương với đau rễ/cột sống.
-            6. Nếu dùng chẩn đoán/mã bệnh cơ xương khớp trong user input, A10 chọn mẫu phù hợp nếu RUN_MODE cho phép.
-            7. A10 không đọc A11-A15 của ROUND hiện tại.
-            8. A10 không đọc A12_STATE của ROUND hiện tại.
-            9. A10 không dùng A12_STATE cũ.
-            10. A10 không đọc C_STATE hoặc O_OUTPUT.
-            11. A10 không đọc output đã render hoặc trí nhớ ẩn.
-            12. A10 không tạo dữ kiện mâu thuẫn với user input.
-            13. A10 không biến dấu thần kinh thuộc A9 thành dấu cơ xương khớp.
-            14. Tê bì theo rễ trong bệnh cảnh đau rễ/cột sống được phân ranh với dấu thần kinh khu trú trung ương của A9.
-
-    A10.18.4. Kiểm A10_STATE
-        Kiểm:
-            1. A10_STATE có STATE_VERSION.
-            2. A10_STATE có UPDATED_AT.
-            3. A10_STATE có A10_REV.
-            4. A10_STATE có A10_HAS_DATA.
-            5. A10_HAS_DATA = YES hoặc NO.
-            6. A10_STATE có A10_FOR_O1.
-            7. A10_STATE có A10_FOR_O8.
-            8. A10_STATE có A10_CHECK.
-            9. Nếu A10_CHECK = NEEDS_FIX, có A10_ERROR rõ.
-            10. Nếu A10_CHECK = PASS, A10_ERROR = NONE.
-            11. A10_REV đúng theo CREATE / UPDATE / REUSE và thay đổi thật của A10_HAS_DATA / A10_FOR_O1 / A10_FOR_O8.
-            12. A10_STATE là full state, không phải patch/delta.
-            13. A10_STATE sẵn sàng đưa vào full current A_STATE.
-
-    A10.18.5. Kết quả A10_CHECK
-        Nếu đạt:
-            A10_CHECK = PASS.
-            A10_ERROR = NONE.
-        Nếu chưa đạt:
-            A10_CHECK = NEEDS_FIX.
-            A10_ERROR = ghi rõ lỗi.
-
-A10.19. Kết thúc module
-    A10.19.1. Điều kiện hoàn tất A10
-        A10 hoàn tất khi:
-            1. Đã CREATE, UPDATE hoặc REUSE full A10_STATE.
-            2. Đã xác định UPDATED_AT.
-            3. Đã xác định A10_HAS_DATA.
-            4. Đã kiểm A10_CHECK.
-            5. Không tạo dữ liệu ngoài A10_STATE.
-            6. Không tạo state của A khác.
-            7. Không chạy C.
-            8. Không render O.
-
-    A10.19.2. Chuyển module tiếp theo
-        Sau khi hoàn tất A10_STATE, chuyển sang A11 theo A_RUN_ORDER.
-        Không chuyển sang A_GATE cho đến khi toàn bộ A1-A15 đã có trạng thái hợp lệ.
-        A10 không tự dừng STEP A và không tự chuyển sang C/O.
+A10_ROLE
+    A10 chuẩn hóa khám cơ xương khớp thực thể, khám cột sống và dấu rễ.
+    A10 không phải bệnh sử cơ xương khớp, không phải chẩn đoán cơ xương khớp, không phải cận lâm sàng cơ xương khớp và không phải điều trị cơ xương khớp.
+    A10 tạo, cập nhật hoặc dùng lại full current A10_STATE để đưa vào full current A_STATE của ROUND hiện tại.
+    A10_STATE là nguồn chính thức cho dữ liệu khám cơ xương khớp khi C/O cần; chất lượng A10_FOR_O1 và A10_FOR_O8 phải được khóa tại A10.
+    A10 tạo 2 bản nội dung:
+        - A10_FOR_O1: bản ngắn cho O1.
+        - A10_FOR_O8: bản chi tiết hơn cho O8.
+    Nếu khám cơ xương khớp sai, lẫn module khác hoặc mâu thuẫn dữ liệu nguồn hợp lệ thì phải sửa tại A10.
+
+A10_ALLOWED_SOURCE
+    A10 chỉ được đọc:
+        1. User input của ROUND hiện tại, chỉ phần thuộc khám cơ xương khớp, khám cột sống, dấu rễ hoặc bệnh cảnh trực tiếp giúp chọn mẫu khám cơ xương khớp hợp lệ.
+        2. G_STATE của ROUND hiện tại, chỉ metadata kỹ thuật: ROUND_ID, STATE_VERSION, RUN_MODE. A10 không tự xác định RUN_MODE.
+        3. Latest/current A10_STATE nếu đã có, chỉ để UPDATE hoặc REUSE.
+        4. File/module A10.
+        5. A1_STATE: chỉ để đối chiếu lý do vào viện liên quan cơ xương khớp/cột sống/đau rễ.
+        6. A2_STATE: chỉ để đối chiếu tiền sử cơ xương khớp, chấn thương, thoái hóa, gout, bệnh khớp, loãng xương hoặc yếu tố nguy cơ liên quan.
+        7. A3_STATE: chỉ để đối chiếu triệu chứng cơ xương khớp, đau khớp, đau cột sống, đau lan rễ, tê bì theo rễ hoặc hạn chế vận động; A3 chỉ định hướng, không bê nguyên triệu chứng cơ năng vào output khám.
+        8. A4_STATE: chỉ để đối chiếu sốt, toàn trạng nặng, phù, da niêm mạc hoặc bệnh cảnh viêm/nhiễm trùng/bệnh hệ thống.
+        9. A5_STATE: chỉ để đồng bộ bệnh cảnh nặng/toàn trạng/tuần hoàn.
+        10. A6_STATE: chỉ để đồng bộ bệnh cảnh nặng/toàn trạng/hô hấp.
+        11. A7_STATE: chỉ để phân biệt đau bụng/hạ sườn/hạ vị với đau cơ xương khớp/cột sống.
+        12. A8_STATE: chỉ để phân biệt đau hông lưng tiết niệu với đau cột sống/thắt lưng.
+        13. A9_STATE: chỉ để phân ranh dấu thần kinh thực thể trung ương với đau rễ, Lasègue, Valleix, Schober.
+    A10 không được đọc full current A_STATE nói chung nếu không qua các state cụ thể được allowlist.
+    A10 không đọc A11-A15 của ROUND hiện tại để tạo A10_STATE.
+    A10 không đọc A12_STATE hiện tại hoặc cũ để tạo dấu khám cơ xương khớp; chẩn đoán/mã bệnh cơ xương khớp chỉ được dùng nếu trực tiếp nằm trong user input và chỉ như bệnh cảnh trong RUN_MODE hợp lệ.
+    A10 không đọc A14_STATE hoặc cận lâm sàng để tạo dấu khám cơ xương khớp nếu không có dữ kiện khám tương ứng.
+    A10 không đọc C_STATE, O_OUTPUT, output đã render, trí nhớ ẩn hoặc dữ liệu ngoài state hợp lệ.
+    A10 không biến A1-A9 thành dữ kiện khám cơ xương khớp mới ngoài phạm vi contract.
+    A10 không biến chẩn đoán/mã bệnh/cận lâm sàng thành dấu khám cơ xương khớp.
+    X-quang, MRI, CT, siêu âm khớp/gân, CRP, acid uric và xét nghiệm không được biến thành khám cơ xương khớp nếu user không cung cấp dấu khám tương ứng.
+
+A10_ALLOWED_ACTION
+    A10 chỉ được làm:
+        1. CREATE full A10_STATE.
+        2. UPDATE full A10_STATE.
+        3. REUSE full A10_STATE.
+        4. CHECK A10_STATE.
+        5. Quản lý A10_REV của chính A10.
+        6. Chọn mẫu khám cơ xương khớp phù hợp theo RUN_MODE và căn cứ hợp lệ.
+
+A10_ALLOWED_WRITE
+    A10 chỉ ghi full A10_STATE.
+    A10 không ghi A1-A9, A11-A15, C/O, A_GATE hoặc A_STATE_OUTPUT_SCHEMA.
+    A10 không tự tạo toàn bộ A_MODULE_REV; A10 chỉ cung cấp/quản lý A10_REV để A_GATE/full current A_STATE tổng hợp.
+    A10_STATE là full state, không phải patch/delta.
+
+A10_STATE_SCHEMA
+    A10_STATE:
+        STATE_VERSION = ...
+        UPDATED_AT = HH:MM dd/mm/yyyy
+        A10_REV = ...
+        A10_HAS_DATA = YES / NO
+        A10_FOR_O1 = ...
+        A10_FOR_O8 = ...
+        A10_CHECK = PASS / NEEDS_FIX
+        A10_ERROR = ...
+    Không thêm STATUS hoặc field mới khác.
+    Không bỏ UPDATED_AT, A10_REV, A10_HAS_DATA, A10_FOR_O1 hoặc A10_FOR_O8; không đổi tên A10_FOR_O1/A10_FOR_O8.
+    UPDATED_AT là metadata quản lý thời điểm cập nhật state, không render vào bệnh án.
+    UPDATED_AT khác A10_REV; thay đổi UPDATED_AT đơn thuần không làm tăng A10_REV.
+    A10_REV là metadata kỹ thuật của A10 để A_GATE/full current A_STATE tổng hợp vào A_MODULE_REV.
+    A10_HAS_DATA = YES khi có dữ liệu cơ xương khớp cần ghi nhận.
+    A10_HAS_DATA = NO khi không có dữ liệu cơ xương khớp cần ghi nhận và không xuất dòng/phần cơ xương khớp ở O1/O8 theo literal đã chốt.
+    Nếu A10_CHECK = PASS thì A10_ERROR = NONE.
+    Nếu A10_CHECK = NEEDS_FIX thì A10_ERROR ghi lỗi cụ thể.
+    A10_STATE là full state, không phải patch/delta.
+
+A10_LOGIC_RULES
+    CREATE / UPDATE / REUSE:
+        - CREATE khi chưa có latest/current A10_STATE.
+        - UPDATE khi user input hiện tại hoặc dependency hợp lệ làm nội dung thật của A10_HAS_DATA, A10_FOR_O1 hoặc A10_FOR_O8 thay đổi.
+        - Dữ liệu ảnh hưởng A10 gồm: dữ kiện khám khớp; sưng/nóng/đỏ/đau khớp; hạn chế vận động khớp; biến dạng khớp; tràn dịch khớp; lạo xạo xương; bập bềnh xương bánh chè; điểm đau gân cơ/phần mềm; đau cột sống; co cứng cơ cạnh sống; điểm đau cột sống; vận động cúi/ngửa/nghiêng/xoay cột sống; đau lan rễ; Lasègue; Valleix; Schober; Patrick hoặc nghiệm pháp cơ xương khớp phù hợp nếu user cung cấp; chỉnh sửa khám cơ xương khớp; dependency hợp lệ phát hiện mâu thuẫn cần sửa A10.
+        - UPDATE chỉ thay phần bị ảnh hưởng; phần không bị ảnh hưởng lấy từ latest/current A10_STATE nếu không mâu thuẫn rule hiện hành.
+        - State sau UPDATE dùng STATE_VERSION của ROUND hiện tại.
+        - REUSE khi đã có latest/current A10_STATE và input/dependency hợp lệ không ảnh hưởng A10 hoặc nội dung thật không đổi.
+        - REUSE vẫn phải in nội dung thật, không ghi “giữ nguyên như trước”, “reuse A10”, “theo bản trước”, “không đổi”.
+    A10_HAS_DATA:
+        - A10_HAS_DATA = YES nếu có triệu chứng/bệnh cảnh/chẩn đoán user-provided/dữ kiện khám/yêu cầu khám chi tiết cơ xương khớp cần ghi nhận.
+        - A10_HAS_DATA = NO nếu không có dữ liệu cơ xương khớp cần ghi nhận.
+        - Nếu A10_HAS_DATA = NO: A10_FOR_O1 = Không xuất dòng Cơ xương khớp trong O1.; A10_FOR_O8 = Không xuất phần cơ xương khớp trong O8.; A10_ERROR = NONE nếu không có lỗi khác.
+        - Không đổi literal no-data thành “Cơ xương khớp bình thường”, “Không phát hiện bất thường”, “Chưa ghi nhận bất thường” hoặc bất kỳ câu âm tính giả nào khác.
+        - Nếu A10_HAS_DATA = YES, A10_FOR_O1/O8 phải có nội dung khám cơ xương khớp thực thể hợp lệ.
+    RUN_MODE:
+        - RUN_MODE lấy từ G_STATE; A10 không tự xác định RUN_MODE; RUN_MODE độc lập với CREATE/UPDATE/REUSE.
+        - USER_ONLY: chỉ dùng dữ kiện khám cơ xương khớp user cung cấp hoặc latest/current A10_STATE hợp lệ để REUSE; không tự tạo khám cơ xương khớp, đau khớp, sưng/nóng/đỏ khớp, hạn chế vận động, biến dạng, tràn dịch, teo cơ, co cứng cơ cạnh sống, Lasègue (+), Valleix đau, Schober bất thường, dấu chèn ép thần kinh nặng hoặc nghiệm pháp (+) nếu user không cung cấp. Nếu không có A10_STATE hợp lệ để reuse và thiếu dữ kiện khám cơ xương khớp nhưng có bệnh cảnh/yêu cầu cần xử lý mà USER_ONLY không được tự hoàn thiện thì A10_CHECK = NEEDS_FIX và A10_ERROR ghi rõ thiếu dữ kiện khám cơ xương khớp. USER_ONLY không biến triệu chứng/bệnh sử/chẩn đoán/mã bệnh/CLS thành dấu khám.
+        - DEFAULT_COMPLETION: được tự tạo khám cơ xương khớp phù hợp bệnh cảnh nếu user không cung cấp đủ và không có dữ kiện trái ngược; được chuyển triệu chứng/bệnh cảnh user-provided thành câu khám thực thể phù hợp khi an toàn; nếu không có dữ liệu cơ xương khớp cần ghi nhận thì A10_HAS_DATA = NO và dùng literal no-data; không tự thêm bất thường cơ xương khớp mới nếu không có căn cứ; không tự tạo sưng/nóng/đỏ, biến dạng, tràn dịch, teo cơ, co cứng cơ cạnh sống, Lasègue (+), Valleix đau, Schober bất thường hoặc nghiệm pháp (+) nếu không có căn cứ; không trái dữ kiện user hoặc dependency hợp lệ.
+        - AUTO_SAMPLE: chỉ dùng cho ca mẫu; có thể tạo khám cơ xương khớp phù hợp bệnh cảnh mẫu; không áp dụng cho ca bệnh thật đã có dữ liệu user; không đọc ngược A12/A11-A15 để tạo A10.
+    A10_FOR_O1:
+        - A10_FOR_O1 là bản ngắn.
+        - Nếu A10_HAS_DATA = NO: A10_FOR_O1 = Không xuất dòng Cơ xương khớp trong O1.
+        - Nếu A10_HAS_DATA = YES: chỉ ghi dấu khám chính, ngắn gọn, đúng vị trí/bên, ưu tiên dấu khám quan trọng; không chứa bệnh sử dài, cận lâm sàng, chẩn đoán, thuốc/hướng xử trí hoặc dấu thần kinh trung ương thuộc A9.
+        - Không bắt đầu bằng câu bệnh sử kiểu “Đau khớp...”, “Đau cột sống...” hoặc “Đau vùng...” nếu chưa chuyển thành câu khám thực thể.
+    A10_FOR_O8:
+        - A10_FOR_O8 là bản chi tiết hơn.
+        - Nếu A10_HAS_DATA = NO: A10_FOR_O8 = Không xuất phần cơ xương khớp trong O8.
+        - Nếu A10_HAS_DATA = YES: chi tiết hơn O1, ưu tiên trình tự khám nhìn - sờ - đánh giá - vận động - nghiệm pháp; không lan man; không thêm âm tính thường quy thừa nếu không cần; không chứa bệnh sử dài, cận lâm sàng, chẩn đoán, thuốc/hướng xử trí hoặc dấu thần kinh trung ương thuộc A9.
+        - Nếu user cung cấp bất thường cơ xương khớp thực thể rõ, O8 phản ánh tương ứng đầy đủ hơn O1.
+    Đồng bộ O1/O8:
+        - O1 và O8 không mâu thuẫn về A10_HAS_DATA, vị trí đau/khớp/cột sống, bên tổn thương, sưng/nóng/đỏ, hạn chế vận động, Lasègue/Valleix/Schober hoặc dấu (+)/(-) user cung cấp.
+        - Nếu O8 có bất thường rõ thì O1 không được ghi no-data hoặc bình thường trái lại.
+        - O8 có thể chi tiết hơn O1 nhưng không thêm dữ kiện sai phạm vi.
+        - Nếu O1/O8 mâu thuẫn nhau thì A10_CHECK = NEEDS_FIX và A10_ERROR ghi rõ.
+
+A10_SPECIAL_RULES
+    Scope include của A10:
+        - Khám khớp; sưng khớp; nóng khớp; đỏ khớp; đau khớp khi khám/ấn/vận động; hạn chế vận động khớp; biến dạng khớp nếu có căn cứ; tràn dịch khớp nếu có căn cứ; teo cơ nếu có căn cứ; lạo xạo xương; bập bềnh xương bánh chè.
+        - Khám cột sống cổ/ngực/thắt lưng; co cứng cơ cạnh sống; điểm đau cột sống; vận động cúi/ngửa/nghiêng/xoay cột sống; đau lan rễ; dấu rễ; Lasègue; Valleix; Schober.
+        - Patrick hoặc nghiệm pháp cơ xương khớp phù hợp nếu user cung cấp; điểm đau gân/cơ/phần mềm nếu user cung cấp; gân Achilles nếu user cung cấp dữ kiện khám hoặc bệnh cảnh trực tiếp; dấu khám cơ xương khớp thực thể khác nếu đã thuộc contract hoặc user cung cấp rõ trong phạm vi A10.
+    Scope exclude / boundary:
+        - A10 không quản lý triệu chứng cơ năng cơ xương khớp đơn thuần nếu chỉ là lời kể; không quản lý bệnh sử cơ xương khớp; không quản lý khám thần kinh trung ương thuộc A9; không quản lý chẩn đoán thuộc A12; không quản lý cận lâm sàng thuộc A14; không quản lý thuốc/điều trị thuộc A15.
+        - A10 không quản lý đau khớp, đau cột sống, đau lan, tê bì hoặc dị cảm nếu chỉ là lời kể và RUN_MODE không cho phép chuyển thành khám; không quản lý yếu liệt/cơ lực/phản xạ/Babinski/rối loạn cơ tròn nếu thuộc dấu thần kinh A9; không quản lý sốt/toàn trạng/da niêm mạc/phù thuộc A4, mạch/huyết áp/tuần hoàn thuộc A5, nhịp thở/SpO2 thuộc A6, đau bụng/khám bụng thuộc A7, đau hông lưng tiết niệu thuộc A8.
+        - A10 không quản lý X-quang, MRI, CT, siêu âm khớp/gân, CRP, acid uric, xét nghiệm, chẩn đoán, thuốc hoặc hướng xử trí/điều trị.
+    Phân ranh A3-A10:
+        - Đau khớp, đau cột sống, đau lan, tê bì theo rễ nếu chỉ là lời kể là triệu chứng cơ năng/bệnh sử, thuộc A3/C7.
+        - A10 không bê nguyên bệnh sử vào A10_FOR_O1/O8.
+        - A10 chỉ ghi dấu khám thực thể tương ứng khi user cung cấp dữ kiện khám hoặc RUN_MODE cho phép chuyển bệnh cảnh/triệu chứng user-provided thành câu khám thực thể phù hợp và an toàn.
+        - Không biến bệnh sử hiện tại thành dấu khám nặng nếu thiếu căn cứ.
+        - Nếu chỉ có “đau khớp gối khi vận động” và DEFAULT_COMPLETION cho phép, có thể tạo khám phù hợp ở mức an toàn, nhưng không tự tạo tràn dịch/biến dạng/sưng nóng đỏ nếu user không cung cấp.
+    Phân ranh A9-A10:
+        - A10 đọc A9_STATE chỉ để phân ranh dấu thần kinh thực thể trung ương với đau rễ/cột sống/Lasègue/Valleix/Schober.
+        - Đau cột sống, đau lan rễ, Lasègue, Valleix, Schober, co cứng cơ cạnh sống và hạn chế vận động cột sống thuộc A10.
+        - Dấu thần kinh khu trú trung ương, yếu liệt thần kinh, cơ lực, phản xạ, Babinski và rối loạn cơ tròn thần kinh thuộc A9.
+        - Lasègue/Valleix không phải dấu thần kinh khu trú trung ương trong A9.
+        - A10 không kéo cơ lực/phản xạ/dấu bó tháp/rối loạn cơ tròn/giảm cảm giác khách quan thuần thần kinh vào A10_FOR_O1/O8.
+        - A10 không biến đau rễ/Lasègue/Valleix thành dấu thần kinh trung ương.
+        - Nếu user cung cấp Lasègue (+)/(-), Valleix đau hoặc Schober, phải giữ đúng bên/kết quả.
+    Phân ranh A12/A14-A10:
+        - Không đọc A12_STATE hiện tại hoặc cũ để tạo dấu khám cơ xương khớp.
+        - Không dùng chẩn đoán/mã bệnh đơn thuần từ A12 để tạo sưng/nóng/đỏ khớp, biến dạng, tràn dịch, teo cơ, co cứng cơ cạnh sống, Lasègue (+), Valleix đau, Schober bất thường hoặc nghiệm pháp (+).
+        - Nếu user input trực tiếp có chẩn đoán/mã bệnh cơ xương khớp thì có thể dùng như bệnh cảnh trong RUN_MODE hợp lệ, nhưng không được thay cho dấu khám nếu user không cung cấp.
+        - X-quang, MRI, CT, siêu âm khớp/gân, CRP, acid uric và xét nghiệm thuộc A14.
+        - Không biến cận lâm sàng thành khám thực thể nếu không có dữ kiện khám tương ứng.
+        - A10_FOR_O1/O8 không chứa cận lâm sàng.
+    Dữ kiện ngoài contract A10:
+        - Dữ kiện ngoài contract A10 không được tự render vào A10_FOR_O1/O8.
+        - Nếu dữ kiện ngoài contract cần xuất hiện trong bệnh án, A10_CHECK = NEEDS_FIX và A10_ERROR nêu cần mở rộng contract hoặc xử lý nguồn phù hợp.
+        - Không tự mở rộng A10_FOR_O1/O8 để chứa field ngoài contract.
+    Dấu khám khớp:
+        - Khớp phải ghi đúng vị trí và bên nếu user cung cấp.
+        - Nếu user cung cấp sưng/nóng/đỏ/đau, hạn chế vận động, lạo xạo xương hoặc bập bềnh xương bánh chè, phải giữ đúng dữ kiện và dấu (+)/(-) nếu có.
+        - Lạo xạo xương dùng “lạo xạo xương (+)” hoặc “lạo xạo xương (-)”.
+        - Không tự tạo sưng/nóng/đỏ, biến dạng, tràn dịch, cứng khớp buổi sáng hoặc teo cơ nếu không có căn cứ.
+        - Không phủ định ngược dấu (+) user cung cấp; không đổi bên tổn thương user cung cấp.
+    Dấu khám cột sống / đau rễ:
+        - Cột sống phải ghi đúng vùng cổ/ngực/thắt lưng.
+        - Nếu user cung cấp co cứng cơ cạnh sống, điểm đau cột sống, hạn chế vận động cúi/ngửa/nghiêng/xoay, đau lan rễ, Lasègue (+)/(-), Valleix đau hoặc Schober, phải giữ đúng vị trí/bên/hướng lan/kết quả nếu có.
+        - Đau thắt lưng đơn thuần không tự tạo Lasègue (+).
+        - Đau cột sống không tự tạo co cứng cơ cạnh sống nếu không có căn cứ.
+        - Đau lan rễ không tự tạo yếu liệt/Babinski (+)/HCMN (+).
+        - Không tự tạo Schober bất thường nếu không có căn cứ.
+    Nghiệm pháp / format / wording:
+        - Chuẩn hóa nghiệm pháp và dấu có/không bằng `(-)/(+)`.
+        - Lasègue phải ghi Lasègue (-)/(+) kèm bên nếu có.
+        - Valleix phải ghi đau/không đau hoặc (+)/(-) theo contract hiện hành, giữ ý nghĩa user cung cấp.
+        - Lạo xạo xương dùng `lạo xạo xương (+)` hoặc `lạo xạo xương (-)`.
+        - Bập bềnh xương bánh chè dùng dấu (+)/(-) nếu user cung cấp.
+        - Không dùng “dương tính/âm tính” trong output chuẩn.
+        - Không liệt kê tràn lan nghiệm pháp; chỉ dùng nghiệm pháp phù hợp vị trí/bệnh cảnh.
+        - Ưu tiên viết dạng khám thực thể: “Khớp [vị trí] sưng/nóng/đỏ/đau”, “Ấn đau [vị trí]”, “Vận động đau tăng”, “Vận động chủ động hạn chế do đau”, “Co cứng cơ cạnh sống”, “Ấn điểm gai sau [vị trí] đau”, “Lasègue (-)/(+)”, “Valleix đau/không đau”, “lạo xạo xương (+)”.
+        - Không dùng cụm mơ hồ “khám cơ xương khớp bình thường”, “không phát hiện bất thường”, “chưa ghi nhận bất thường”; nếu A10_HAS_DATA = NO phải dùng literal no-data đã chốt.
+        - Không bê nguyên câu bệnh sử vào output khám.
+
+A10_CHECK_PASS_IF
+    A10_CHECK = PASS khi tất cả điều kiện sau đạt:
+        1. A10_STATE đủ schema, có UPDATED_AT hợp lệ, có A10_REV và là full state.
+        2. A10_HAS_DATA hợp lệ YES/NO.
+        3. Nếu A10_HAS_DATA = NO: A10_FOR_O1 đúng literal “Không xuất dòng Cơ xương khớp trong O1.”; A10_FOR_O8 đúng literal “Không xuất phần cơ xương khớp trong O8.”; A10_ERROR = NONE nếu không có lỗi khác.
+        4. Nếu A10_HAS_DATA = YES: A10_FOR_O1 và A10_FOR_O8 có dữ liệu khám cơ xương khớp hợp lệ, đúng format, đúng scope A10, đúng RUN_MODE, không trái user input, không mâu thuẫn dependency hợp lệ, không tự tạo dấu khám từ triệu chứng/bệnh sử/chẩn đoán/mã bệnh/CLS, không chứa triệu chứng cơ năng đơn thuần chưa chuyển thành khám hợp lệ, không chứa dấu thần kinh trung ương thuộc A9, không chứa cận lâm sàng/chẩn đoán/thuốc/hướng xử trí, không chứa khám cơ quan khác ngoài scope A10, không mâu thuẫn nhau.
+        5. Mẫu no-data dùng literal đúng; nghiệm pháp/dấu dùng `(-)/(+)`; không dùng wording cấm.
+        6. A10_REV đúng theo CREATE/UPDATE/REUSE và thay đổi thật của A10_HAS_DATA/A10_FOR_O1/A10_FOR_O8.
+        7. A10_ERROR = NONE.
+
+A10_NEEDS_FIX_IF
+    A10_CHECK = NEEDS_FIX nếu có bất kỳ lỗi sau:
+        1. USER_ONLY thiếu dữ kiện khám cơ xương khớp và không có state hợp lệ để REUSE trong bối cảnh cần xử lý.
+        2. A10_HAS_DATA không hợp lệ hoặc A10_FOR_O1/A10_FOR_O8 không khớp A10_HAS_DATA.
+        3. A10_FOR_O1 hoặc A10_FOR_O8 thiếu dữ liệu cần thiết, chứa dữ liệu ngoài scope A10, tự tạo dấu khám từ triệu chứng/bệnh sử/chẩn đoán/mã bệnh/CLS, mâu thuẫn user input hoặc mâu thuẫn nhau.
+        4. DEFAULT_COMPLETION tạo mẫu trái dữ kiện user hoặc dependency hợp lệ.
+        5. Bệnh cảnh có nguy cơ cơ xương khớp nặng/mâu thuẫn khiến không thể tự hoàn thiện an toàn.
+        6. O1/O8 sai format dấu khớp/cột sống/nghiệm pháp, dùng “dương tính/âm tính” thay vì `(-)/(+)`, hoặc dùng wording bị cấm.
+        7. Dữ kiện ngoài contract A10 cần xuất hiện trong bệnh án nhưng không có nơi xử lý hợp lệ.
+        8. State thiếu field bắt buộc, A10_REV thiếu/không hợp lệ, A10_ERROR không rõ khi NEEDS_FIX hoặc A10_ERROR không phải NONE khi PASS.
+
+A10_ERROR_RULE
+    Nếu A10_CHECK = PASS thì A10_ERROR = NONE.
+    Nếu A10_CHECK = NEEDS_FIX thì A10_ERROR phải ghi lỗi cụ thể.
+    Nếu thiếu dữ liệu, A10_ERROR phải nêu dữ liệu cần user bổ sung.
+    Nếu mâu thuẫn, A10_ERROR phải nêu điểm mâu thuẫn.
+    Nếu sai phạm vi, A10_ERROR phải nêu phần cần sửa.
+    Nếu sai format, A10_ERROR phải nêu format cần sửa.
+    Nếu dữ kiện ngoài contract cần xuất hiện, A10_ERROR phải nêu cần mở rộng contract hoặc xử lý nguồn phù hợp.
+    Không ghi lỗi chung chung nếu xác định được lỗi.
+
+A10_REUSE_RULE
+    REUSE khi latest/current A10_STATE có và input/dependency hợp lệ không ảnh hưởng A10 hoặc không làm đổi nội dung thật A10_HAS_DATA/A10_FOR_O1/A10_FOR_O8.
+    Khi REUSE, dùng lại nội dung thật của latest/current A10_STATE nếu nội dung đó vẫn đạt rule A10 hiện hành.
+    Khi REUSE, vẫn in full A10_STATE với STATE_VERSION hiện tại.
+    UPDATED_AT theo ROUND hiện tại hoặc theo contract hiện hành; thay đổi metadata UPDATED_AT đơn thuần không làm tăng A10_REV.
+    Không ghi “giữ nguyên như trước”, “reuse A10”, “theo bản trước” hoặc “không đổi”.
+    Không dùng patch/delta thay cho A10_HAS_DATA/A10_FOR_O1/A10_FOR_O8.
+    A10_REV giữ nguyên nếu A10_HAS_DATA/A10_FOR_O1/A10_FOR_O8 không thay đổi thật.
+
+A10_REV_RULE
+    CREATE A10_STATE thì A10_REV = 1.
+    UPDATE nếu A10_HAS_DATA, A10_FOR_O1 hoặc A10_FOR_O8 thay đổi thật thì A10_REV tăng so với A10_REV hiện hành.
+    REUSE hoặc input/dependency hợp lệ không làm đổi nội dung thật A10_HAS_DATA/A10_FOR_O1/A10_FOR_O8 thì A10_REV giữ nguyên.
+    Thay đổi UPDATED_AT đơn thuần không làm tăng A10_REV.
+    Dependency hợp lệ làm nội dung thật thay đổi thì A10 phải UPDATE và tăng A10_REV.
+    A10_REV tăng/giữ theo thay đổi thật của A10_HAS_DATA/A10_FOR_O1/A10_FOR_O8, không theo tên RUN_MODE.
+    A10_REV là metadata kỹ thuật để A_GATE/full current A_STATE tổng hợp vào A_MODULE_REV.
+    A10 không tự tạo toàn bộ A_MODULE_REV.
+    A10_STATE vẫn phải là full state, không patch/delta.
+
+A10_END
+    A10 hoàn tất khi đã CREATE, UPDATE hoặc REUSE full A10_STATE; đã xác định UPDATED_AT, A10_HAS_DATA, A10_FOR_O1, A10_FOR_O8, A10_REV; đã kiểm A10_CHECK; và không ghi ngoài A10_STATE.
+    Sau khi hoàn tất A10_STATE, chuyển sang A11 theo A_RUN_ORDER.
+    Không chuyển sang A_GATE cho đến khi toàn bộ A1-A15 đã có trạng thái hợp lệ.
+    A10 không tự dừng STEP A, không tự chuyển sang C/O và không render bệnh án.
 
 <<< END A10
 
 ```text
 ####################################################################################################
-
 A11 — KHÁM CƠ QUAN KHÁC
 Version: BA S-G-A-C-O v3
 Update 12:00 04/06/2026 GMT+7
